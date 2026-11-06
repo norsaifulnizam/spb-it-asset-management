@@ -202,7 +202,12 @@ export default function Home() {
           <i>⌘</i>AssetFlow
         </b>
         <nav>
-          {["assets", "dashboard", "employees", "maintenance"].map((item) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}>{item === "maintenance" ? "Maintenance logs" : item[0].toUpperCase() + item.slice(1)}</button>)}
+          {[
+            ["dashboard", "▦", "Dashboard"],
+            ["assets", "▣", "Assets"],
+            ["employees", "♙", "Employees"],
+            ["maintenance", "⚒", "Maintenance"],
+          ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
         </nav>
         <small>
           SELANGOR PROPERTIES
@@ -212,7 +217,7 @@ export default function Home() {
       </aside>
       <section>
         <header>
-          <div><em>{view.toUpperCase()}</em><h1>{view === "assets" ? "Asset register" : view === "dashboard" ? "Asset overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Search, register and manage every IT asset." : view === "employees" ? "Review people and their currently assigned assets." : "Live asset information for IT operations."}</p></div>
+          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Asset register" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Search, register and manage every IT asset." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
           {view === "assets" && <button onClick={newAsset}>+ Register asset</button>}
         </header>
         {notice && (
@@ -222,20 +227,20 @@ export default function Home() {
           </div>
         )}
         {view === "dashboard" && <><div className="stats">
-          <Card t="Total assets" n={assets.length} />
+          <Card t="Total assets" n={assets.length} icon="▣" />
           <Card
             t="Assigned"
-            n={assets.filter((x) => x.status === "assigned").length}
+            n={assets.filter((x) => x.status === "assigned").length} icon="♙"
           />
           <Card
             t="Available"
-            n={assets.filter((x) => x.status === "available").length}
+            n={assets.filter((x) => x.status === "available").length} icon="✓"
           />
           <Card
             t="Under repair"
-            n={assets.filter((x) => x.status === "under_repair").length}
+            n={assets.filter((x) => x.status === "under_repair").length} icon="⚒"
           />
-          <Card t="Warranty expired" n={assets.filter(expired).length} />
+          <Card t="Warranty expired" n={assets.filter(expired).length} icon="!" />
         </div></>}
         {view === "assets" && <div className="panel">
           <div className="title">
@@ -363,27 +368,19 @@ export default function Home() {
               <p className="state">Everything looks good.</p>
             )}
           </div>
-          <div className="panel">
+          <div className="panel dashboard-summary">
             <div className="title">
               <div>
-                <h2>Employees</h2>
-                <p>Available for assignment.</p>
+                <h2>Asset status</h2>
+                <p>Current distribution across the register.</p>
               </div>
             </div>
-            {people.map((p) => (
-              <div className="row" key={p.id}>
-                <i>
-                  {p.name
-                    .split(" ")
-                    .map((x) => x[0])
-                    .join("")}
-                </i>
-                <span>
-                  <b>{p.name}</b>
-                  <small>{p.department || "No department"}</small>
-                </span>
-              </div>
-            ))}
+            <div className="status-summary">
+              <strong>{assets.length ? Math.round((assets.filter(x => x.status === "assigned").length / assets.length) * 100) : 0}%</strong>
+              <span>of registered assets are assigned</span>
+              <div><b style={{width: `${assets.length ? (assets.filter(x => x.status === "assigned").length / assets.length) * 100 : 0}%`}} /></div>
+              <small>{assets.filter(x => x.status === "available").length} available · {assets.filter(x => x.status === "under_repair").length} under repair</small>
+            </div>
           </div>
         </div>}
         {view === "employees" && <div className="panel employee-directory">{people.filter(p => assets.some(a => a.assigned_employee_id === p.id)).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <div className="row" key={p.id}><i>{p.name.split(" ").map(x => x[0]).join("").slice(0,3)}</i><span><b>{p.name}</b><small>{p.department || "No department"} · {assigned.length} assigned asset{assigned.length === 1 ? "" : "s"}</small><small className="assigned-list">{assigned.map(a => a.asset_tag).join(", ")}</small></span></div>})}</div>}
@@ -590,10 +587,10 @@ export default function Home() {
     </main>
   );
 }
-function Card(p: { t: string; n: number }) {
+function Card(p: { t: string; n: number; icon: string }) {
   return (
     <div className="card">
-      <small>{p.t}</small>
+      <i>{p.icon}</i><small>{p.t}</small>
       <b>{p.n}</b>
     </div>
   );
