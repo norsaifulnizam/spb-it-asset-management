@@ -47,6 +47,10 @@ export default function Home() {
     [type, setType] = useState("all"),
     [location, setLocation] = useState("all"),
     [view, setView] = useState("dashboard"),
+    [pageSize, setPageSize] = useState(10),
+    [assetPage, setAssetPage] = useState(1),
+    [employeePage, setEmployeePage] = useState(1),
+    [logPage, setLogPage] = useState(1),
     [edit, setEdit] = useState<Asset | null | undefined>(undefined),
     [detail, setDetail] = useState<Asset | null>(null),
     [f, setF] = useState(empty);
@@ -107,6 +111,17 @@ export default function Home() {
       a.condition === "defective" ||
       expired(a),
   );
+  const assignedPeople = people.filter((p) =>
+    assets.some((a) => a.assigned_employee_id === p.id),
+  );
+  const pageItems = <T,>(items: T[], page: number) =>
+    items.slice((page - 1) * pageSize, page * pageSize);
+  function changePageSize(size: number) {
+    setPageSize(size);
+    setAssetPage(1);
+    setEmployeePage(1);
+    setLogPage(1);
+  }
   function newAsset() {
     setEdit(null);
     setF(empty);
@@ -256,15 +271,15 @@ export default function Home() {
             <input
               placeholder="Search tag, serial, model, location or employee"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => { setQ(e.target.value); setAssetPage(1); }}
             />
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select value={status} onChange={(e) => { setStatus(e.target.value); setAssetPage(1); }}>
               <option value="all">All statuses</option>
               <option value="available">Available</option>
               <option value="assigned">Assigned</option>
               <option value="under_repair">Under repair</option>
             </select>
-            <select value={type} onChange={(e) => setType(e.target.value)}>
+            <select value={type} onChange={(e) => { setType(e.target.value); setAssetPage(1); }}>
               <option value="all">All types</option>
               {[...new Set(assets.map((a) => a.asset_type))].map((x) => (
                 <option key={x}>{x}</option>
@@ -272,7 +287,7 @@ export default function Home() {
             </select>
             <select
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => { setLocation(e.target.value); setAssetPage(1); }}
             >
               <option value="all">All locations</option>
               {[...new Set(assets.map((a) => a.location).filter(Boolean))].map(
@@ -299,7 +314,7 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {list.map((a) => (
+                {pageItems(list, assetPage).map((a) => (
                   <tr key={a.id}>
                     <td>
                       <a onClick={() => setDetail(a)}>
@@ -337,6 +352,7 @@ export default function Home() {
               </tbody>
             </table>
           )}
+          {!busy && list.length > 0 && <Pager total={list.length} page={assetPage} setPage={setAssetPage} pageSize={pageSize} setPageSize={changePageSize} />}
         </div>}
         {view === "dashboard" && <div className="cols">
           <div className="panel employee-preview">
@@ -383,8 +399,8 @@ export default function Home() {
             </div>
           </div>
         </div>}
-        {view === "employees" && <div className="panel employee-directory">{people.filter(p => assets.some(a => a.assigned_employee_id === p.id)).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <div className="row" key={p.id}><i>{p.name.split(" ").map(x => x[0]).join("").slice(0,3)}</i><span><b>{p.name}</b><small>{p.department || "No department"} · {assigned.length} assigned asset{assigned.length === 1 ? "" : "s"}</small><small className="assigned-list">{assigned.map(a => a.asset_tag).join(", ")}</small></span></div>})}</div>}
-        {view === "maintenance" && <div className="panel maintenance-list">{logs.map((l) => { const asset = assets.find(a => a.id === l.asset_id); return <div className="log" key={l.id}><Tag v={l.log_type}/><span><b>{asset?.asset_tag || "Asset removed"}</b>{l.description}</span><small>{l.logged_date}</small></div>})}</div>}
+        {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Assigned employees</h2><p>People with an IT asset currently assigned.</p></div></div>{assignedPeople.length ? pageItems(assignedPeople, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <div className="row" key={p.id}><i>{p.name.split(" ").map(x => x[0]).join("").slice(0,3)}</i><span><b>{p.name}</b><small>{p.department || "No department"} · {assigned.length} assigned asset{assigned.length === 1 ? "" : "s"}</small><small className="assigned-list">{assigned.map(a => a.asset_tag).join(", ")}</small></span></div>}) : <p className="state">No assigned employees.</p>}{assignedPeople.length > 0 && <Pager total={assignedPeople.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
+        {view === "maintenance" && <div className="panel maintenance-list"><div className="title"><div><h2>Service history</h2><p>Repairs and maintenance entries across all assets.</p></div></div>{logs.length ? pageItems(logs, logPage).map((l) => { const asset = assets.find(a => a.id === l.asset_id); return <div className="log" key={l.id}><Tag v={l.log_type}/><span><b>{asset?.asset_tag || "Asset removed"}</b>{l.description}</span><small>{l.logged_date}</small></div>}) : <p className="state">No maintenance history yet.</p>}{logs.length > 0 && <Pager total={logs.length} page={logPage} setPage={setLogPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {edit !== undefined && (
           <div className="modal">
             <form onSubmit={save}>
@@ -594,6 +610,12 @@ function Card(p: { t: string; n: number; icon: string }) {
       <b>{p.n}</b>
     </div>
   );
+}
+function Pager(p: { total: number; page: number; setPage: (page: number) => void; pageSize: number; setPageSize: (size: number) => void }) {
+  const pages = Math.max(1, Math.ceil(p.total / p.pageSize));
+  const start = (p.page - 1) * p.pageSize + 1;
+  const end = Math.min(p.page * p.pageSize, p.total);
+  return <div className="pager"><small>Showing {start}–{end} of {p.total}</small><label>Show <select value={p.pageSize} onChange={(e) => { p.setPageSize(Number(e.target.value)); p.setPage(1); }}><option value={10}>10</option><option value={20}>20</option><option value={30}>30</option><option value={50}>50</option></select></label><div><button className="plain" disabled={p.page === 1} onClick={() => p.setPage(p.page - 1)}>Previous</button><span>{p.page} / {pages}</span><button className="plain" disabled={p.page === pages} onClick={() => p.setPage(p.page + 1)}>Next</button></div></div>;
 }
 function Tag(p: { v: string }) {
   return (
