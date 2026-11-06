@@ -1,0 +1,28 @@
+.app > aside > b {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 2px 10px;
+  font-size: 0;
+}
+
+.app > aside > b::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  background: url("/spsb-logo.png") center / contain no-repeat;
+}
+
+.app > aside > b::after {
+  content: "IT Asset\A Management";
+  white-space: pre;
+  color: #202d35;
+  font-size: 16px;
+  line-height: 1.1;
+  letter-spacing: -0.2px;
+}
+
+.app > aside > b > i { display: none; }
