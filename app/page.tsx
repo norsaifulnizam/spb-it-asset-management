@@ -46,7 +46,7 @@ export default function Home() {
     [status, setStatus] = useState("all"),
     [type, setType] = useState("all"),
     [location, setLocation] = useState("all"),
-    [view, setView] = useState("assets"),
+    [view, setView] = useState("dashboard"),
     [edit, setEdit] = useState<Asset | null | undefined>(undefined),
     [detail, setDetail] = useState<Asset | null>(null),
     [f, setF] = useState(empty);
