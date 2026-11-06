@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-type Employee = { id: string; name: string; department: string | null };
+type Employee = { id: string; name: string; department: string | null; office_location: string | null };
 type Asset = {
   id: string;
   asset_tag: string;
@@ -51,6 +51,9 @@ export default function Home() {
     [assetPage, setAssetPage] = useState(1),
     [employeePage, setEmployeePage] = useState(1),
     [logPage, setLogPage] = useState(1),
+    [employeeQuery, setEmployeeQuery] = useState(""),
+    [employeeDetail, setEmployeeDetail] = useState<Employee | null>(null),
+    [employeeForm, setEmployeeForm] = useState({ name: "", department: "", office_location: "" }),
     [edit, setEdit] = useState<Asset | null | undefined>(undefined),
     [detail, setDetail] = useState<Asset | null>(null),
     [f, setF] = useState(empty);
@@ -61,7 +64,7 @@ export default function Home() {
         .from("assets")
         .select("*, employees(id,name,department)")
         .order("created_at", { ascending: false }),
-      db.from("employees").select("id,name,department").order("name"),
+      db.from("employees").select("id,name,department,office_location").order("name"),
       db
         .from("maintenance_logs")
         .select("*")
@@ -114,6 +117,9 @@ export default function Home() {
   const assignedPeople = people.filter((p) =>
     assets.some((a) => a.assigned_employee_id === p.id),
   );
+  const employeeList = assignedPeople.filter((p) =>
+    [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
+  );
   const pageItems = <T,>(items: T[], page: number) =>
     items.slice((page - 1) * pageSize, page * pageSize);
   function changePageSize(size: number) {
@@ -121,6 +127,19 @@ export default function Home() {
     setAssetPage(1);
     setEmployeePage(1);
     setLogPage(1);
+  }
+  function openEmployee(p: Employee) {
+    setEmployeeDetail(p);
+    setEmployeeForm({ name: p.name, department: p.department || "", office_location: p.office_location || "" });
+  }
+  async function saveEmployee(e: React.FormEvent) {
+    e.preventDefault();
+    if (!employeeDetail || !employeeForm.name.trim()) return;
+    const r = await db.from("employees").update({ name: employeeForm.name.trim(), department: employeeForm.department || null, office_location: employeeForm.office_location || null }).eq("id", employeeDetail.id);
+    if (r.error) return setNotice(r.error.message);
+    setEmployeeDetail(null);
+    setNotice("Employee details saved.");
+    load();
   }
   function newAsset() {
     setEdit(null);
@@ -399,7 +418,7 @@ export default function Home() {
             </div>
           </div>
         </div>}
-        {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Assigned employees</h2><p>People with an IT asset currently assigned.</p></div></div>{assignedPeople.length ? pageItems(assignedPeople, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <div className="row" key={p.id}><i>{p.name.split(" ").map(x => x[0]).join("").slice(0,3)}</i><span><b>{p.name}</b><small>{p.department || "No department"} · {assigned.length} assigned asset{assigned.length === 1 ? "" : "s"}</small><small className="assigned-list">{assigned.map(a => a.asset_tag).join(", ")}</small></span></div>}) : <p className="state">No assigned employees.</p>}{assignedPeople.length > 0 && <Pager total={assignedPeople.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
+        {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Assigned employees</h2><p>Search employee information and assigned assets.</p></div></div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th><th /></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><b>{p.name}</b></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td><td><button className="plain" onClick={() => openEmployee(p)}>View details</button></td></tr>; })}</tbody></table> : <p className="state">No assigned employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "maintenance" && <div className="panel maintenance-list"><div className="title"><div><h2>Service history</h2><p>Repairs and maintenance entries across all assets.</p></div></div>{logs.length ? pageItems(logs, logPage).map((l) => { const asset = assets.find(a => a.id === l.asset_id); return <div className="log" key={l.id}><Tag v={l.log_type}/><span><b>{asset?.asset_tag || "Asset removed"}</b>{l.description}</span><small>{l.logged_date}</small></div>}) : <p className="state">No maintenance history yet.</p>}{logs.length > 0 && <Pager total={logs.length} page={logPage} setPage={setLogPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {edit !== undefined && (
           <div className="modal">
@@ -599,6 +618,7 @@ export default function Home() {
             </div>
           </div>
         )}
+        {employeeDetail && <div className="modal"><form onSubmit={saveEmployee}><div className="title"><div><em>EMPLOYEE DETAILS</em><h2>{employeeDetail.name}</h2></div><button className="x" type="button" onClick={() => setEmployeeDetail(null)}>×</button></div><div className="form"><Input l="Name *" v={employeeForm.name} set={(v) => setEmployeeForm({ ...employeeForm, name: v })} /><Input l="Department" v={employeeForm.department} set={(v) => setEmployeeForm({ ...employeeForm, department: v })} /><Input l="Office location" v={employeeForm.office_location} set={(v) => setEmployeeForm({ ...employeeForm, office_location: v })} /></div><h3>Assigned assets</h3><div className="assigned-assets">{assets.filter(a => a.assigned_employee_id === employeeDetail.id).map(a => <button type="button" className="plain" key={a.id} onClick={() => { setEmployeeDetail(null); setDetail(a); }}>{a.asset_tag} · {a.brand_model}</button>)}{!assets.some(a => a.assigned_employee_id === employeeDetail.id) && <small>No assets currently assigned.</small>}</div><div className="actions"><button className="plain" type="button" onClick={() => setEmployeeDetail(null)}>Cancel</button><button>Save details</button></div></form></div>}
       </section>
     </main>
   );
