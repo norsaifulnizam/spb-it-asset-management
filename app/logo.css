@@ -26,3 +26,21 @@
 }
 
 .app > aside > b > i { display: none; }
+
+/* Shared visual language with the Meeting Room Booking application. */
+body { background: #f8fafc; }
+.app > aside { border-right-color: #dbe4f0; }
+.app > aside nav a.on { background: #fff1f2; color: #881337 !important; }
+.app > aside nav a:hover { background: #eff6ff; color: #1d4ed8; }
+em { color: #881337; }
+button { background: #881337; }
+button:hover { background: #640023; }
+.plain { color: #881337; border-color: #cbd5e1; }
+.plain:hover { background: #fff1f2; border-color: #881337; }
+.panel, .card { border-color: #dbe4f0; box-shadow: 0 4px 20px -4px #1d4ed814; }
+.panel { border-radius: 16px; }
+.card { border-radius: 12px; }
+.filters input:focus, .filters select:focus, .form input:focus, .form select:focus, .form textarea:focus { outline: none; border-color: #881337; box-shadow: 0 0 0 3px #88133720; }
+.assetLink, a { color: #1d4ed8; }
+.on { color: #881337 !important; }
+.notice { background: #ecfdf5; color: #047857; }
