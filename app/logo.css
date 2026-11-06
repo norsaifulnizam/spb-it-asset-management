@@ -44,3 +44,10 @@ button:hover { background: #640023; }
 .assetLink, a { color: #1d4ed8; }
 .on { color: #881337 !important; }
 .notice { background: #ecfdf5; color: #047857; }
+
+.app > aside nav button { width:100%; text-align:left; padding:11px 12px; background:transparent; color:#52626c; border:0; border-radius:8px; box-shadow:none; }
+.app > aside nav button.on { background:#fff1f2; color:#881337; }
+.app > aside nav button:hover { background:#eff6ff; color:#1d4ed8; }
+.employee-directory .row { min-height:68px; }
+.assigned-list { margin-top:4px; color:#64748b; }
+.maintenance-list .log { padding:14px 20px; }
