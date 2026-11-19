@@ -495,6 +495,7 @@ export default function Home() {
                     {[
                       "Laptop",
                       "Desktop Computer",
+                      "Server",
                       "Monitor",
                       "Phone",
                       "Tablet",
