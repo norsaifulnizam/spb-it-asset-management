@@ -35,6 +35,15 @@ type SoftwareLicense = {
   annual_cost: number | null;
   notes: string | null;
 };
+type ServerDetail = {
+  asset_id: string;
+  hostname: string | null;
+  ip_address: string | null;
+  operating_system: string | null;
+  server_role: string | null;
+  environment: string | null;
+  rack_location: string | null;
+};
 const empty = {
   asset_tag: "",
   asset_type: "Laptop",
@@ -47,12 +56,14 @@ const empty = {
   notes: "",
 };
 const emptySoftware = { product_name: "", vendor: "", license_type: "subscription", total_seats: "1", assigned_seats: "0", renewal_date: "", annual_cost: "", notes: "" };
+const emptyServerInfo = { hostname: "", ip_address: "", operating_system: "", server_role: "", environment: "production", rack_location: "" };
 export default function Home() {
   const db = useMemo(() => createClient(), []);
   const [assets, setAssets] = useState<Asset[]>([]),
     [people, setPeople] = useState<Employee[]>([]),
     [logs, setLogs] = useState<Log[]>([]),
     [software, setSoftware] = useState<SoftwareLicense[]>([]),
+    [serverDetails, setServerDetails] = useState<ServerDetail[]>([]),
     [busy, setBusy] = useState(true),
     [notice, setNotice] = useState(""),
     [q, setQ] = useState(""),
@@ -66,18 +77,21 @@ export default function Home() {
     [employeePage, setEmployeePage] = useState(1),
     [logPage, setLogPage] = useState(1),
     [softwarePage, setSoftwarePage] = useState(1),
+    [serverPage, setServerPage] = useState(1),
     [softwareQuery, setSoftwareQuery] = useState(""),
     [employeeQuery, setEmployeeQuery] = useState(""),
     [employeeDetail, setEmployeeDetail] = useState<Employee | null>(null),
     [employeeForm, setEmployeeForm] = useState({ name: "", department: "", office_location: "" }),
     [softwareEdit, setSoftwareEdit] = useState<SoftwareLicense | null | undefined>(undefined),
     [softwareForm, setSoftwareForm] = useState(emptySoftware),
+    [serverInfoAsset, setServerInfoAsset] = useState<Asset | null>(null),
+    [serverForm, setServerForm] = useState(emptyServerInfo),
     [edit, setEdit] = useState<Asset | null | undefined>(undefined),
     [detail, setDetail] = useState<Asset | null>(null),
     [f, setF] = useState(empty);
   async function load() {
     setBusy(true);
-    const [a, p, l, s] = await Promise.all([
+    const [a, p, l, s, sd] = await Promise.all([
       db
         .from("assets")
         .select("*, employees(id,name,department)")
@@ -88,6 +102,7 @@ export default function Home() {
         .select("*")
         .order("logged_date", { ascending: false }),
       db.from("software_licenses").select("*").order("product_name"),
+      db.from("server_details").select("*"),
     ]);
     if (a.error || p.error || l.error)
       setNotice(
@@ -101,6 +116,7 @@ export default function Home() {
       setPeople(p.data as Employee[]);
       setLogs(l.data as Log[]);
       setSoftware(s.error ? [] : s.data as SoftwareLicense[]);
+      setServerDetails(sd.error ? [] : sd.data as ServerDetail[]);
       if (s.error) setNotice("Software Licences is still being set up. Hardware assets remain available.");
     }
     setBusy(false);
@@ -150,6 +166,7 @@ export default function Home() {
     setEmployeePage(1);
     setLogPage(1);
     setSoftwarePage(1);
+    setServerPage(1);
   }
   function openEmployee(p: Employee) {
     setEmployeeDetail(p);
@@ -186,10 +203,35 @@ export default function Home() {
     if (r.error) return setNotice(r.error.message);
     setSoftwareEdit(undefined); setNotice("Software licence deleted."); load();
   }
-  function newAsset() {
+  function newAsset(assetType = "Laptop") {
     setEdit(null);
-    setF(empty);
+    setF({ ...empty, asset_type: assetType });
     setNotice("");
+  }
+  function openServerInfo(a: Asset) {
+    const current = serverDetails.find((x) => x.asset_id === a.id);
+    setServerInfoAsset(a);
+    setServerForm(current ? {
+      hostname: current.hostname || "", ip_address: current.ip_address || "", operating_system: current.operating_system || "", server_role: current.server_role || "", environment: current.environment || "production", rack_location: current.rack_location || "",
+    } : emptyServerInfo);
+  }
+  async function saveServerInfo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!serverInfoAsset) return;
+    const data = {
+      asset_id: serverInfoAsset.id,
+      hostname: serverForm.hostname || null,
+      ip_address: serverForm.ip_address || null,
+      operating_system: serverForm.operating_system || null,
+      server_role: serverForm.server_role || null,
+      environment: serverForm.environment || null,
+      rack_location: serverForm.rack_location || null,
+    };
+    const r = await db.from("server_details").upsert(data, { onConflict: "asset_id" });
+    if (r.error) return setNotice(r.error.message);
+    setServerInfoAsset(null);
+    setNotice("Server information saved.");
+    load();
   }
   function editing(a: Asset) {
     setEdit(a);
@@ -284,8 +326,8 @@ export default function Home() {
           {[
             ["dashboard", "▦", "Dashboard"],
           ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
-          <button className={view === "assets" ? "on" : ""} onClick={() => { setView("assets"); setHardwareOpen(!hardwareOpen); }}><i>▣</i>Hardware Assets <b className="nav-caret">{hardwareOpen ? "−" : "+"}</b></button>
-          {hardwareOpen && <div className="hardware-subnav">{[["Laptop", "Laptop"], ["Desktop Computer", "Desktop"], ["Monitor", "Monitor"], ["Server", "Server"]].map(([assetType, label]) => <button key={assetType} className={view === "assets" && type === assetType ? "selected" : ""} onClick={() => { setView("assets"); setType(assetType); setAssetPage(1); }}><i>·</i>{label}</button>)}</div>}
+          <button className={view === "assets" || view === "servers" ? "on" : ""} onClick={() => { setView("assets"); setHardwareOpen(!hardwareOpen); }}><i>▣</i>Hardware Assets <b className="nav-caret">{hardwareOpen ? "−" : "+"}</b></button>
+          {hardwareOpen && <div className="hardware-subnav">{[["Laptop", "Laptop"], ["Desktop Computer", "Desktop"], ["Monitor", "Monitor"], ["Server", "Server"]].map(([assetType, label]) => <button key={assetType} className={(assetType === "Server" ? view === "servers" : view === "assets" && type === assetType) ? "selected" : ""} onClick={() => { if (assetType === "Server") { setView("servers"); setServerPage(1); } else { setView("assets"); setType(assetType); setAssetPage(1); } }}><i>·</i>{label}</button>)}</div>}
           {[
             ["software", "◈", "Software Licences"],
             ["employees", "♙", "Employees"],
@@ -300,8 +342,9 @@ export default function Home() {
       </aside>
       <section>
         <header>
-          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
-          {view === "assets" && <button onClick={newAsset}>+ Register hardware</button>}
+          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
+          {view === "assets" && <button onClick={() => newAsset()}>+ Register hardware</button>}
+          {view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
           {view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
         </header>
         {notice && (
@@ -423,6 +466,7 @@ export default function Home() {
           )}
           {!busy && list.length > 0 && <Pager total={list.length} page={assetPage} setPage={setAssetPage} pageSize={pageSize} setPageSize={changePageSize} />}
         </div>}
+        {view === "servers" && <div className="panel"><div className="title"><div><h2>Server register</h2><p>Hostname, IP, operating system, role, environment and rack location.</p></div><button className="plain" onClick={load}>Refresh</button></div>{busy ? <p className="state">Loading servers…</p> : assets.filter((a) => a.asset_type === "Server").length ? <><table><thead><tr><th>Server</th><th>Hostname / IP address</th><th>System / role</th><th>Environment</th><th>Rack / location</th><th /></tr></thead><tbody>{pageItems(assets.filter((a) => a.asset_type === "Server"), serverPage).map((a) => { const info = serverDetails.find((x) => x.asset_id === a.id); return <tr key={a.id}><td><b>{a.asset_tag}</b><small>{a.brand_model} · {a.serial_number || "No serial"}</small></td><td><b>{info?.hostname || "Not set"}</b><small>{info?.ip_address || "IP not set"}</small></td><td><b>{info?.operating_system || "Not set"}</b><small>{info?.server_role || "Role not set"}</small></td><td>{info?.environment || "Not set"}</td><td><b>{info?.rack_location || "Not set"}</b><small>{a.location || "Asset location not set"}</small></td><td><button className="plain" onClick={() => openServerInfo(a)}>Server info</button></td></tr>; })}</tbody></table><Pager total={assets.filter((a) => a.asset_type === "Server").length} page={serverPage} setPage={setServerPage} pageSize={pageSize} setPageSize={changePageSize} /></> : <p className="state">No server assets yet. Register a server here, or edit an existing hardware asset and set its type to Server.</p>}</div>}
         {view === "dashboard" && <div className="cols">
           <div className="panel employee-preview">
             <div className="title">
@@ -674,6 +718,7 @@ export default function Home() {
           </div>
         )}
         {softwareEdit !== undefined && <div className="modal"><form onSubmit={saveSoftware}><div className="title"><div><em>SOFTWARE LICENCE</em><h2>{softwareEdit ? "Edit software licence" : "Add software licence"}</h2></div><button className="x" type="button" onClick={() => setSoftwareEdit(undefined)}>×</button></div><div className="form"><Input l="Product name *" v={softwareForm.product_name} set={(v) => setSoftwareForm({ ...softwareForm, product_name: v })} /><Input l="Vendor" v={softwareForm.vendor} set={(v) => setSoftwareForm({ ...softwareForm, vendor: v })} /><label>Licence type<select value={softwareForm.license_type} onChange={(e) => setSoftwareForm({ ...softwareForm, license_type: e.target.value })}><option value="subscription">Subscription</option><option value="perpetual">Perpetual</option><option value="trial">Trial</option></select></label><Input l="Total seats" v={softwareForm.total_seats} set={(v) => setSoftwareForm({ ...softwareForm, total_seats: v })} /><Input l="Assigned seats" v={softwareForm.assigned_seats} set={(v) => setSoftwareForm({ ...softwareForm, assigned_seats: v })} /><label>Renewal date<input type="date" value={softwareForm.renewal_date} onChange={(e) => setSoftwareForm({ ...softwareForm, renewal_date: e.target.value })} /></label><Input l="Annual cost (RM)" v={softwareForm.annual_cost} set={(v) => setSoftwareForm({ ...softwareForm, annual_cost: v })} /><label className="wide">Notes<textarea value={softwareForm.notes} onChange={(e) => setSoftwareForm({ ...softwareForm, notes: e.target.value })} /></label></div><div className="actions">{softwareEdit && <button className="delete" type="button" onClick={() => deleteSoftware(softwareEdit)}>Delete licence</button>}<button className="plain" type="button" onClick={() => setSoftwareEdit(undefined)}>Cancel</button><button>Save licence</button></div></form></div>}
+        {serverInfoAsset && <div className="modal"><form onSubmit={saveServerInfo}><div className="title"><div><em>SERVER INFORMATION</em><h2>{serverInfoAsset.asset_tag}</h2><p>{serverInfoAsset.brand_model}</p></div><button className="x" type="button" onClick={() => setServerInfoAsset(null)}>×</button></div><div className="form"><Input l="Hostname" v={serverForm.hostname} set={(v) => setServerForm({ ...serverForm, hostname: v })} /><Input l="IP address" v={serverForm.ip_address} set={(v) => setServerForm({ ...serverForm, ip_address: v })} /><Input l="Operating system" v={serverForm.operating_system} set={(v) => setServerForm({ ...serverForm, operating_system: v })} /><Input l="Server role" v={serverForm.server_role} set={(v) => setServerForm({ ...serverForm, server_role: v })} /><label>Environment<select value={serverForm.environment} onChange={(e) => setServerForm({ ...serverForm, environment: e.target.value })}><option value="production">Production</option><option value="uat">UAT</option><option value="development">Development</option><option value="disaster recovery">Disaster recovery</option></select></label><Input l="Rack / server location" v={serverForm.rack_location} set={(v) => setServerForm({ ...serverForm, rack_location: v })} /></div><div className="actions"><button className="plain" type="button" onClick={() => setServerInfoAsset(null)}>Cancel</button><button>Save server info</button></div></form></div>}
         {employeeDetail && <div className="modal"><form onSubmit={saveEmployee}><div className="title"><div><em>EMPLOYEE DETAILS</em><h2>{employeeDetail.name}</h2></div><button className="x" type="button" onClick={() => setEmployeeDetail(null)}>×</button></div><div className="form"><Input l="Name *" v={employeeForm.name} set={(v) => setEmployeeForm({ ...employeeForm, name: v })} /><Input l="Department" v={employeeForm.department} set={(v) => setEmployeeForm({ ...employeeForm, department: v })} /><Input l="Office location" v={employeeForm.office_location} set={(v) => setEmployeeForm({ ...employeeForm, office_location: v })} /></div><h3>Assigned assets</h3><div className="assigned-assets">{assets.filter(a => a.assigned_employee_id === employeeDetail.id).map(a => <button type="button" className="plain" key={a.id} onClick={() => { setEmployeeDetail(null); setDetail(a); }}>{a.asset_tag} · {a.brand_model}</button>)}{!assets.some(a => a.assigned_employee_id === employeeDetail.id) && <small>No assets currently assigned.</small>}</div><div className="actions"><button className="plain" type="button" onClick={() => setEmployeeDetail(null)}>Cancel</button><button>Save details</button></div></form></div>}
       </section>
     </main>
