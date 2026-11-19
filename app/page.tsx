@@ -24,6 +24,17 @@ type Log = {
   description: string | null;
   logged_date: string;
 };
+type SoftwareLicense = {
+  id: string;
+  product_name: string;
+  vendor: string | null;
+  license_type: string;
+  total_seats: number;
+  assigned_seats: number;
+  renewal_date: string | null;
+  annual_cost: number | null;
+  notes: string | null;
+};
 const empty = {
   asset_tag: "",
   asset_type: "Laptop",
@@ -35,11 +46,13 @@ const empty = {
   location: "",
   notes: "",
 };
+const emptySoftware = { product_name: "", vendor: "", license_type: "subscription", total_seats: "1", assigned_seats: "0", renewal_date: "", annual_cost: "", notes: "" };
 export default function Home() {
   const db = useMemo(() => createClient(), []);
   const [assets, setAssets] = useState<Asset[]>([]),
     [people, setPeople] = useState<Employee[]>([]),
     [logs, setLogs] = useState<Log[]>([]),
+    [software, setSoftware] = useState<SoftwareLicense[]>([]),
     [busy, setBusy] = useState(true),
     [notice, setNotice] = useState(""),
     [q, setQ] = useState(""),
@@ -51,15 +64,19 @@ export default function Home() {
     [assetPage, setAssetPage] = useState(1),
     [employeePage, setEmployeePage] = useState(1),
     [logPage, setLogPage] = useState(1),
+    [softwarePage, setSoftwarePage] = useState(1),
+    [softwareQuery, setSoftwareQuery] = useState(""),
     [employeeQuery, setEmployeeQuery] = useState(""),
     [employeeDetail, setEmployeeDetail] = useState<Employee | null>(null),
     [employeeForm, setEmployeeForm] = useState({ name: "", department: "", office_location: "" }),
+    [softwareEdit, setSoftwareEdit] = useState<SoftwareLicense | null | undefined>(undefined),
+    [softwareForm, setSoftwareForm] = useState(emptySoftware),
     [edit, setEdit] = useState<Asset | null | undefined>(undefined),
     [detail, setDetail] = useState<Asset | null>(null),
     [f, setF] = useState(empty);
   async function load() {
     setBusy(true);
-    const [a, p, l] = await Promise.all([
+    const [a, p, l, s] = await Promise.all([
       db
         .from("assets")
         .select("*, employees(id,name,department)")
@@ -69,18 +86,21 @@ export default function Home() {
         .from("maintenance_logs")
         .select("*")
         .order("logged_date", { ascending: false }),
+      db.from("software_licenses").select("*").order("product_name"),
     ]);
-    if (a.error || p.error || l.error)
+    if (a.error || p.error || l.error || s.error)
       setNotice(
         a.error?.message ||
           p.error?.message ||
           l.error?.message ||
+          s.error?.message ||
           "Database error",
       );
     else {
       setAssets(a.data as Asset[]);
       setPeople(p.data as Employee[]);
       setLogs(l.data as Log[]);
+      setSoftware(s.data as SoftwareLicense[]);
     }
     setBusy(false);
   }
@@ -120,6 +140,7 @@ export default function Home() {
   const employeeList = assignedPeople.filter((p) =>
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
+  const softwareList = software.filter((s) => [s.product_name, s.vendor, s.license_type].filter(Boolean).join(" ").toLowerCase().includes(softwareQuery.toLowerCase()));
   const pageItems = <T,>(items: T[], page: number) =>
     items.slice((page - 1) * pageSize, page * pageSize);
   function changePageSize(size: number) {
@@ -127,6 +148,7 @@ export default function Home() {
     setAssetPage(1);
     setEmployeePage(1);
     setLogPage(1);
+    setSoftwarePage(1);
   }
   function openEmployee(p: Employee) {
     setEmployeeDetail(p);
@@ -140,6 +162,28 @@ export default function Home() {
     setEmployeeDetail(null);
     setNotice("Employee details saved.");
     load();
+  }
+  function newSoftware() { setSoftwareEdit(null); setSoftwareForm(emptySoftware); setNotice(""); }
+  function editSoftware(s: SoftwareLicense) {
+    setSoftwareEdit(s);
+    setSoftwareForm({ product_name: s.product_name, vendor: s.vendor || "", license_type: s.license_type, total_seats: String(s.total_seats), assigned_seats: String(s.assigned_seats), renewal_date: s.renewal_date || "", annual_cost: s.annual_cost == null ? "" : String(s.annual_cost), notes: s.notes || "" });
+  }
+  async function saveSoftware(e: React.FormEvent) {
+    e.preventDefault();
+    const total = Number(softwareForm.total_seats);
+    const assigned = Number(softwareForm.assigned_seats);
+    if (!softwareForm.product_name.trim()) return setNotice("Software product name is required.");
+    if (!Number.isInteger(total) || !Number.isInteger(assigned) || total < 0 || assigned < 0 || assigned > total) return setNotice("Assigned seats must be a whole number and cannot exceed total seats.");
+    const data = { product_name: softwareForm.product_name.trim(), vendor: softwareForm.vendor || null, license_type: softwareForm.license_type, total_seats: total, assigned_seats: assigned, renewal_date: softwareForm.renewal_date || null, annual_cost: softwareForm.annual_cost ? Number(softwareForm.annual_cost) : null, notes: softwareForm.notes || null };
+    const r = softwareEdit ? await db.from("software_licenses").update(data).eq("id", softwareEdit.id) : await db.from("software_licenses").insert(data);
+    if (r.error) return setNotice(r.error.message);
+    setSoftwareEdit(undefined); setNotice("Software licence saved."); load();
+  }
+  async function deleteSoftware(s: SoftwareLicense) {
+    if (!confirm(`Delete ${s.product_name}?`)) return;
+    const r = await db.from("software_licenses").delete().eq("id", s.id);
+    if (r.error) return setNotice(r.error.message);
+    setSoftwareEdit(undefined); setNotice("Software licence deleted."); load();
   }
   function newAsset() {
     setEdit(null);
@@ -238,7 +282,8 @@ export default function Home() {
         <nav>
           {[
             ["dashboard", "▦", "Dashboard"],
-            ["assets", "▣", "Assets"],
+            ["assets", "▣", "Hardware Assets"],
+            ["software", "◈", "Software Licences"],
             ["employees", "♙", "Employees"],
             ["maintenance", "⚒", "Maintenance"],
           ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
@@ -251,8 +296,9 @@ export default function Home() {
       </aside>
       <section>
         <header>
-          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Asset register" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Search, register and manage every IT asset." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
-          {view === "assets" && <button onClick={newAsset}>+ Register asset</button>}
+          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
+          {view === "assets" && <button onClick={newAsset}>+ Register hardware</button>}
+          {view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
         </header>
         {notice && (
           <div className="notice">
@@ -274,13 +320,13 @@ export default function Home() {
             t="Under repair"
             n={assets.filter((x) => x.status === "under_repair").length} icon="⚒"
           />
-          <Card t="Warranty expired" n={assets.filter(expired).length} icon="!" />
+          <Card t="Software licences" n={software.length} icon="◈" />
         </div></>}
         {view === "assets" && <div className="panel">
           <div className="title">
             <div>
-              <h2>Asset register</h2>
-              <p>Changes are saved to the live register.</p>
+              <h2>Hardware asset register</h2>
+              <p>Laptops, computers, devices and peripherals saved to the live register.</p>
             </div>
             <button className="plain" onClick={load}>
               Refresh
@@ -419,6 +465,7 @@ export default function Home() {
           </div>
         </div>}
         {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Assigned employees</h2><p>Search employee information and assigned assets.</p></div></div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th><th /></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><b>{p.name}</b></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td><td><button className="plain" onClick={() => openEmployee(p)}>View details</button></td></tr>; })}</tbody></table> : <p className="state">No assigned employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
+        {view === "software" && <div className="panel software-register"><div className="title"><div><h2>Software licence register</h2><p>Keep subscriptions, licence seats and upcoming renewals together.</p></div><button className="plain" onClick={load}>Refresh</button></div><div className="filters"><input placeholder="Search product, vendor or licence type" value={softwareQuery} onChange={(e) => { setSoftwareQuery(e.target.value); setSoftwarePage(1); }} /></div>{softwareList.length ? <table><thead><tr><th>Software</th><th>Licence type</th><th>Seats</th><th>Renewal</th><th>Annual cost</th><th /></tr></thead><tbody>{pageItems(softwareList, softwarePage).map((s) => <tr key={s.id}><td><b>{s.product_name}</b><small>{s.vendor || "Vendor not set"}</small></td><td><Tag v={s.license_type} /></td><td><b>{s.assigned_seats} / {s.total_seats}</b><small>{s.total_seats - s.assigned_seats} available</small></td><td>{s.renewal_date || "Not set"}</td><td>{s.annual_cost == null ? "—" : `RM ${s.annual_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td><td><button className="plain" onClick={() => editSoftware(s)}>Edit</button></td></tr>)}</tbody></table> : <p className="state">No software licences match your search.</p>}{softwareList.length > 0 && <Pager total={softwareList.length} page={softwarePage} setPage={setSoftwarePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "maintenance" && <div className="panel maintenance-list"><div className="title"><div><h2>Service history</h2><p>Repairs and maintenance entries across all assets.</p></div></div>{logs.length ? pageItems(logs, logPage).map((l) => { const asset = assets.find(a => a.id === l.asset_id); return <div className="log" key={l.id}><Tag v={l.log_type}/><span><b>{asset?.asset_tag || "Asset removed"}</b>{l.description}</span><small>{l.logged_date}</small></div>}) : <p className="state">No maintenance history yet.</p>}{logs.length > 0 && <Pager total={logs.length} page={logPage} setPage={setLogPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {edit !== undefined && (
           <div className="modal">
@@ -447,10 +494,13 @@ export default function Home() {
                   >
                     {[
                       "Laptop",
+                      "Desktop Computer",
                       "Monitor",
                       "Phone",
+                      "Tablet",
+                      "Printer",
+                      "Network Equipment",
                       "Accessory",
-                      "Software",
                     ].map((x) => (
                       <option key={x}>{x}</option>
                     ))}
@@ -618,6 +668,7 @@ export default function Home() {
             </div>
           </div>
         )}
+        {softwareEdit !== undefined && <div className="modal"><form onSubmit={saveSoftware}><div className="title"><div><em>SOFTWARE LICENCE</em><h2>{softwareEdit ? "Edit software licence" : "Add software licence"}</h2></div><button className="x" type="button" onClick={() => setSoftwareEdit(undefined)}>×</button></div><div className="form"><Input l="Product name *" v={softwareForm.product_name} set={(v) => setSoftwareForm({ ...softwareForm, product_name: v })} /><Input l="Vendor" v={softwareForm.vendor} set={(v) => setSoftwareForm({ ...softwareForm, vendor: v })} /><label>Licence type<select value={softwareForm.license_type} onChange={(e) => setSoftwareForm({ ...softwareForm, license_type: e.target.value })}><option value="subscription">Subscription</option><option value="perpetual">Perpetual</option><option value="trial">Trial</option></select></label><Input l="Total seats" v={softwareForm.total_seats} set={(v) => setSoftwareForm({ ...softwareForm, total_seats: v })} /><Input l="Assigned seats" v={softwareForm.assigned_seats} set={(v) => setSoftwareForm({ ...softwareForm, assigned_seats: v })} /><label>Renewal date<input type="date" value={softwareForm.renewal_date} onChange={(e) => setSoftwareForm({ ...softwareForm, renewal_date: e.target.value })} /></label><Input l="Annual cost (RM)" v={softwareForm.annual_cost} set={(v) => setSoftwareForm({ ...softwareForm, annual_cost: v })} /><label className="wide">Notes<textarea value={softwareForm.notes} onChange={(e) => setSoftwareForm({ ...softwareForm, notes: e.target.value })} /></label></div><div className="actions">{softwareEdit && <button className="delete" type="button" onClick={() => deleteSoftware(softwareEdit)}>Delete licence</button>}<button className="plain" type="button" onClick={() => setSoftwareEdit(undefined)}>Cancel</button><button>Save licence</button></div></form></div>}
         {employeeDetail && <div className="modal"><form onSubmit={saveEmployee}><div className="title"><div><em>EMPLOYEE DETAILS</em><h2>{employeeDetail.name}</h2></div><button className="x" type="button" onClick={() => setEmployeeDetail(null)}>×</button></div><div className="form"><Input l="Name *" v={employeeForm.name} set={(v) => setEmployeeForm({ ...employeeForm, name: v })} /><Input l="Department" v={employeeForm.department} set={(v) => setEmployeeForm({ ...employeeForm, department: v })} /><Input l="Office location" v={employeeForm.office_location} set={(v) => setEmployeeForm({ ...employeeForm, office_location: v })} /></div><h3>Assigned assets</h3><div className="assigned-assets">{assets.filter(a => a.assigned_employee_id === employeeDetail.id).map(a => <button type="button" className="plain" key={a.id} onClick={() => { setEmployeeDetail(null); setDetail(a); }}>{a.asset_tag} · {a.brand_model}</button>)}{!assets.some(a => a.assigned_employee_id === employeeDetail.id) && <small>No assets currently assigned.</small>}</div><div className="actions"><button className="plain" type="button" onClick={() => setEmployeeDetail(null)}>Cancel</button><button>Save details</button></div></form></div>}
       </section>
     </main>
