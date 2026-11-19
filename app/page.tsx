@@ -88,19 +88,19 @@ export default function Home() {
         .order("logged_date", { ascending: false }),
       db.from("software_licenses").select("*").order("product_name"),
     ]);
-    if (a.error || p.error || l.error || s.error)
+    if (a.error || p.error || l.error)
       setNotice(
         a.error?.message ||
           p.error?.message ||
           l.error?.message ||
-          s.error?.message ||
           "Database error",
       );
     else {
       setAssets(a.data as Asset[]);
       setPeople(p.data as Employee[]);
       setLogs(l.data as Log[]);
-      setSoftware(s.data as SoftwareLicense[]);
+      setSoftware(s.error ? [] : s.data as SoftwareLicense[]);
+      if (s.error) setNotice("Software Licences is still being set up. Hardware assets remain available.");
     }
     setBusy(false);
   }
