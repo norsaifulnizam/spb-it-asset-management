@@ -1,4 +1,5 @@
 "use client";
+import "./sidebar.css";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 type Employee = { id: string; name: string; department: string | null; office_location: string | null };
