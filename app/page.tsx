@@ -93,6 +93,7 @@ export default function Home() {
     [hardwareOpen, setHardwareOpen] = useState(false),
     [pageSize, setPageSize] = useState(10),
     [assetPage, setAssetPage] = useState(1),
+    [attentionPage, setAttentionPage] = useState(1),
     [employeePage, setEmployeePage] = useState(1),
     [logPage, setLogPage] = useState(1),
     [softwarePage, setSoftwarePage] = useState(1),
@@ -173,6 +174,8 @@ export default function Home() {
       a.condition === "defective" ||
       expired(a),
   );
+  const attentionPages = Math.max(1, Math.ceil(attention.length / 10));
+  const attentionItems = attention.slice((attentionPage - 1) * 10, attentionPage * 10);
   const employeeList = people.filter((p) =>
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
@@ -538,7 +541,7 @@ export default function Home() {
               </div>
             </div>
             {attention.length ? (
-              attention.map((a) => (
+              <>{attentionItems.map((a) => (
                 <a className="row" key={a.id} onClick={() => setDetail(a)}>
                   <i />{" "}
                   <span>
@@ -554,7 +557,7 @@ export default function Home() {
                     </small>
                   </span>
                 </a>
-              ))
+              ))}{attention.length > 10 && <div className="pager"><small>Showing {(attentionPage - 1) * 10 + 1}–{Math.min(attentionPage * 10, attention.length)} of {attention.length}</small><div><button className="plain" disabled={attentionPage === 1} onClick={() => setAttentionPage(attentionPage - 1)}>Previous</button><span>{attentionPage} / {attentionPages}</span><button className="plain" disabled={attentionPage === attentionPages} onClick={() => setAttentionPage(attentionPage + 1)}>Next</button></div></div>}</>
             ) : (
               <p className="state">Everything looks good.</p>
             )}
