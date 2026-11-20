@@ -88,6 +88,7 @@ export default function Home() {
     [status, setStatus] = useState("all"),
     [type, setType] = useState("all"),
     [location, setLocation] = useState("all"),
+    [year, setYear] = useState("all"),
     [view, setView] = useState("dashboard"),
     [hardwareOpen, setHardwareOpen] = useState(false),
     [pageSize, setPageSize] = useState(10),
@@ -150,9 +151,11 @@ export default function Home() {
       (status === "all" || a.status === status) &&
       (type === "all" || a.asset_type === type) &&
       (location === "all" || a.location === location) &&
+      (year === "all" || a.purchase_date?.slice(0, 4) === year) &&
       [
         a.asset_tag,
         a.brand_model,
+        a.device_name,
         a.serial_number,
         a.location,
         a.employees?.name,
@@ -161,7 +164,8 @@ export default function Home() {
         .join(" ")
         .toLowerCase()
         .includes(q.toLowerCase()),
-  );
+  ).sort((a, b) => (b.purchase_date || "").localeCompare(a.purchase_date || ""));
+  const purchaseYears = [...new Set(assets.map((a) => a.purchase_date?.slice(0, 4)).filter(Boolean))].sort().reverse();
   const attention = assets.filter(
     (a) =>
       a.status === "under_repair" ||
@@ -463,6 +467,10 @@ export default function Home() {
                 ),
               )}
             </select>
+            <select value={year} onChange={(e) => { setYear(e.target.value); setAssetPage(1); }}>
+              <option value="all">All years</option>
+              {purchaseYears.map((x) => <option key={x}>{x}</option>)}
+            </select>
           </div>
           {busy ? (
             <p className="state">Loading assets…</p>
@@ -486,9 +494,8 @@ export default function Home() {
                     <td>
                       <a onClick={() => setDetail(a)}>
                         <b>{a.asset_tag}</b>
-                        <small>
-                          {a.brand_model} · {a.serial_number || "No serial"}
-                        </small>
+                        <small>PC name: {a.device_name || "Not set"}</small>
+                        <small>SN: {a.serial_number || "Not set"}</small>
                       </a>
                       {expired(a) && <mark>Warranty expired</mark>}
                     </td>
