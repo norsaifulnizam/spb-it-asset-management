@@ -173,10 +173,7 @@ export default function Home() {
       a.condition === "defective" ||
       expired(a),
   );
-  const assignedPeople = people.filter((p) =>
-    assets.some((a) => a.assigned_employee_id === p.id),
-  );
-  const employeeList = assignedPeople.filter((p) =>
+  const employeeList = people.filter((p) =>
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
   const softwareList = software.filter((s) => [s.product_name, s.vendor, s.license_type].filter(Boolean).join(" ").toLowerCase().includes(softwareQuery.toLowerCase()));
@@ -297,7 +294,9 @@ export default function Home() {
     }
     if (f.status === "assigned" && !assignedEmployeeId)
       return setNotice("Choose or enter an assigned user before setting the asset to Assigned.");
-    const assetStatus = f.status === "disposed" ? "disposed" : assignedEmployeeId && f.status === "available" ? "assigned" : f.status;
+    // A named user always represents a live assignment. This prevents an
+    // edited, previously-disposed asset from silently dropping its assignee.
+    const assetStatus = assignedEmployeeId ? "assigned" : f.status;
     const data = {
       ...f,
       assigned_user: undefined,
@@ -313,7 +312,7 @@ export default function Home() {
       network_group: f.network_group || null,
       storage_type: f.storage_type || null,
       previous_user: f.previous_user || null,
-      assigned_employee_id: assetStatus === "disposed" ? null : assignedEmployeeId,
+      assigned_employee_id: assignedEmployeeId,
       status: assetStatus,
       notes: f.notes || null,
     };
@@ -574,7 +573,7 @@ export default function Home() {
             </div>
           </div>
         </div>}
-        {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Assigned employees</h2><p>Search employee information and assigned assets.</p></div></div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th><th /></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><b>{p.name}</b></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td><td><button className="plain" onClick={() => openEmployee(p)}>View details</button></td></tr>; })}</tbody></table> : <p className="state">No assigned employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
+        {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Employee directory</h2><p>Search employee information and assigned assets.</p></div></div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th><th /></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><b>{p.name}</b></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td><td><button className="plain" onClick={() => openEmployee(p)}>View details</button></td></tr>; })}</tbody></table> : <p className="state">No employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "software" && <div className="panel software-register"><div className="title"><div><h2>Software licence register</h2><p>Keep subscriptions, licence seats and upcoming renewals together.</p></div><button className="plain" onClick={load}>Refresh</button></div><div className="filters"><input placeholder="Search product, vendor or licence type" value={softwareQuery} onChange={(e) => { setSoftwareQuery(e.target.value); setSoftwarePage(1); }} /></div>{softwareList.length ? <table><thead><tr><th>Software</th><th>Licence type</th><th>Seats</th><th>Renewal</th><th>Annual cost</th><th /></tr></thead><tbody>{pageItems(softwareList, softwarePage).map((s) => <tr key={s.id}><td><b>{s.product_name}</b><small>{s.vendor || "Vendor not set"}</small></td><td><Tag v={s.license_type} /></td><td><b>{s.assigned_seats} / {s.total_seats}</b><small>{s.total_seats - s.assigned_seats} available</small></td><td>{s.renewal_date || "Not set"}</td><td>{s.annual_cost == null ? "—" : `RM ${s.annual_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td><td><button className="plain" onClick={() => editSoftware(s)}>Edit</button></td></tr>)}</tbody></table> : <p className="state">No software licences match your search.</p>}{softwareList.length > 0 && <Pager total={softwareList.length} page={softwarePage} setPage={setSoftwarePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "maintenance" && <div className="panel maintenance-list"><div className="title"><div><h2>Service history</h2><p>Repairs and maintenance entries across all assets.</p></div></div>{logs.length ? pageItems(logs, logPage).map((l) => { const asset = assets.find(a => a.id === l.asset_id); return <div className="log" key={l.id}><Tag v={l.log_type}/><span><b>{asset?.asset_tag || "Asset removed"}</b>{l.description}</span><small>{l.logged_date}</small></div>}) : <p className="state">No maintenance history yet.</p>}{logs.length > 0 && <Pager total={logs.length} page={logPage} setPage={setLogPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {edit !== undefined && (
@@ -665,13 +664,13 @@ export default function Home() {
                 />
                 <label>
                   Assigned user
-                  <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value })} placeholder="Search or type a new name" />
+                  <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value, status: e.target.value.trim() ? "assigned" : f.status })} placeholder="Search or type a new name" />
                   <datalist id="employee-names">{people.map((p) => <option key={p.id} value={p.name}>{p.department || "Employee"}</option>)}</datalist>
                   <small>New names are added to Employees when you save.</small>
                 </label>
                 <label>
                   Status
-                  <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
+                  <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value, assigned_user: e.target.value === "disposed" ? "" : f.assigned_user })}>
                     <option value="available">Available</option>
                     <option value="assigned">Assigned</option>
                     <option value="under_repair">Under repair</option>
