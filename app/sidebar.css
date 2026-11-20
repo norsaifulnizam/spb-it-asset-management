@@ -13,3 +13,4 @@
 .detail-assignee { display: grid; justify-items: end; color: #475569; font-size: 12px; }
 .detail-assignee small { color: #64748b; font-size: 11px; }
 .detail-assignee b { color: #881337; font-size: 14px; }
+.detail-tag { font-size: 13px; letter-spacing: 1.1px; }

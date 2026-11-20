@@ -720,7 +720,7 @@ export default function Home() {
             <div className="detail">
               <div className="title">
                 <div>
-                  <em>{detail.asset_tag}</em>
+                  <em className="detail-tag">{detail.asset_tag}</em>
                   <h2>{detail.brand_model}</h2>
                   <p>
                     {detail.asset_type} · {detail.serial_number || "No serial"}
