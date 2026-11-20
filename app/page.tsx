@@ -69,6 +69,8 @@ const empty = {
   network_group: "",
   storage_type: "",
   previous_user: "",
+  assigned_user: "",
+  status: "available",
   notes: "",
 };
 const emptySoftware = { product_name: "", vendor: "", license_type: "subscription", total_seats: "1", assigned_seats: "0", renewal_date: "", annual_cost: "", notes: "" };
@@ -269,6 +271,8 @@ export default function Home() {
       network_group: a.network_group || "",
       storage_type: a.storage_type || "",
       previous_user: a.previous_user || "",
+      assigned_user: a.employees?.name || "",
+      status: a.status,
       notes: a.notes || "",
     });
   }
@@ -276,8 +280,23 @@ export default function Home() {
     e.preventDefault();
     if (!f.asset_tag || !f.brand_model)
       return setNotice("Asset tag and brand/model are required.");
+    let assignedEmployeeId: string | null = null;
+    const assignedName = f.assigned_user.trim();
+    if (assignedName) {
+      const existing = people.find((p) => p.name.trim().toLowerCase() === assignedName.toLowerCase());
+      if (existing) assignedEmployeeId = existing.id;
+      else {
+        const created = await db.from("employees").insert({ name: assignedName }).select("id").single();
+        if (created.error) return setNotice(created.error.message);
+        assignedEmployeeId = created.data.id;
+      }
+    }
+    if (f.status === "assigned" && !assignedEmployeeId)
+      return setNotice("Choose or enter an assigned user before setting the asset to Assigned.");
+    const assetStatus = f.status === "disposed" ? "disposed" : assignedEmployeeId && f.status === "available" ? "assigned" : f.status;
     const data = {
       ...f,
+      assigned_user: undefined,
       serial_number: f.serial_number || null,
       purchase_date: f.purchase_date || null,
       warranty_expiry: f.warranty_expiry || null,
@@ -290,6 +309,8 @@ export default function Home() {
       network_group: f.network_group || null,
       storage_type: f.storage_type || null,
       previous_user: f.previous_user || null,
+      assigned_employee_id: assetStatus === "disposed" ? null : assignedEmployeeId,
+      status: assetStatus,
       notes: f.notes || null,
     };
     const r = edit
@@ -422,6 +443,8 @@ export default function Home() {
               <option value="available">Available</option>
               <option value="assigned">Assigned</option>
               <option value="under_repair">Under repair</option>
+              <option value="disposed">Disposed</option>
+              <option value="not_applicable">N/A</option>
             </select>
             <select value={type} onChange={(e) => { setType(e.target.value); setAssetPage(1); }}>
               <option value="all">All types</option>
@@ -633,6 +656,22 @@ export default function Home() {
                   v={f.location}
                   set={(v) => setF({ ...f, location: v })}
                 />
+                <label>
+                  Assigned user
+                  <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value })} placeholder="Search or type a new name" />
+                  <datalist id="employee-names">{people.map((p) => <option key={p.id} value={p.name}>{p.department || "Employee"}</option>)}</datalist>
+                  <small>New names are added to Employees when you save.</small>
+                </label>
+                <label>
+                  Status
+                  <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
+                    <option value="available">Available</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="under_repair">Under repair</option>
+                    <option value="disposed">Disposed</option>
+                    <option value="not_applicable">N/A</option>
+                  </select>
+                </label>
                 <label className="wide">
                   Remarks / notes
                   <textarea
