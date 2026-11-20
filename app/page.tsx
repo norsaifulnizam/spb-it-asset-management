@@ -309,7 +309,7 @@ export default function Home() {
         assignedEmployeeId = created.data.id;
       }
     }
-    if (f.status === "assigned" && !assignedEmployeeId)
+    if (f.assignment_kind === "internal" && f.status === "assigned" && !assignedEmployeeId)
       return setNotice("Choose or enter an assigned user before setting the asset to Assigned.");
     // Keep the recorded user even for disposed assets. The asset status is
     // separate from its ownership history, while an available asset with a
