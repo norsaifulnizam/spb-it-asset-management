@@ -12,6 +12,14 @@ type Asset = {
   warranty_expiry: string | null;
   condition: string;
   location: string | null;
+  company: string | null;
+  device_name: string | null;
+  specifications: string | null;
+  operating_system: string | null;
+  installed_software: string | null;
+  network_group: string | null;
+  storage_type: string | null;
+  previous_user: string | null;
   assigned_employee_id: string | null;
   status: string;
   notes: string | null;
@@ -53,6 +61,14 @@ const empty = {
   warranty_expiry: "",
   condition: "good",
   location: "",
+  company: "SPB",
+  device_name: "",
+  specifications: "",
+  operating_system: "",
+  installed_software: "",
+  network_group: "",
+  storage_type: "",
+  previous_user: "",
   notes: "",
 };
 const emptySoftware = { product_name: "", vendor: "", license_type: "subscription", total_seats: "1", assigned_seats: "0", renewal_date: "", annual_cost: "", notes: "" };
@@ -245,6 +261,14 @@ export default function Home() {
       warranty_expiry: a.warranty_expiry || "",
       condition: a.condition,
       location: a.location || "",
+      company: a.company || "",
+      device_name: a.device_name || "",
+      specifications: a.specifications || "",
+      operating_system: a.operating_system || "",
+      installed_software: a.installed_software || "",
+      network_group: a.network_group || "",
+      storage_type: a.storage_type || "",
+      previous_user: a.previous_user || "",
       notes: a.notes || "",
     });
   }
@@ -258,6 +282,14 @@ export default function Home() {
       purchase_date: f.purchase_date || null,
       warranty_expiry: f.warranty_expiry || null,
       location: f.location || null,
+      company: f.company || null,
+      device_name: f.device_name || null,
+      specifications: f.specifications || null,
+      operating_system: f.operating_system || null,
+      installed_software: f.installed_software || null,
+      network_group: f.network_group || null,
+      storage_type: f.storage_type || null,
+      previous_user: f.previous_user || null,
       notes: f.notes || null,
     };
     const r = edit
@@ -602,12 +634,23 @@ export default function Home() {
                   set={(v) => setF({ ...f, location: v })}
                 />
                 <label className="wide">
-                  Notes
+                  Remarks / notes
                   <textarea
                     value={f.notes}
                     onChange={(e) => setF({ ...f, notes: e.target.value })}
                   />
                 </label>
+              </div>
+              <h3>Device details</h3>
+              <div className="form">
+                <Input l="Company" v={f.company} set={(v) => setF({ ...f, company: v })} />
+                <Input l="PC / device name" v={f.device_name} set={(v) => setF({ ...f, device_name: v })} />
+                <Input l="Operating system" v={f.operating_system} set={(v) => setF({ ...f, operating_system: v })} />
+                <Input l="Storage type" v={f.storage_type} set={(v) => setF({ ...f, storage_type: v })} />
+                <Input l="Domain / workgroup" v={f.network_group} set={(v) => setF({ ...f, network_group: v })} />
+                <Input l="Previous user" v={f.previous_user} set={(v) => setF({ ...f, previous_user: v })} />
+                <label className="wide">Specifications<textarea value={f.specifications} onChange={(e) => setF({ ...f, specifications: e.target.value })} placeholder="CPU, RAM, storage, graphics…" /></label>
+                <label className="wide">Software loaded<textarea value={f.installed_software} onChange={(e) => setF({ ...f, installed_software: e.target.value })} placeholder="Microsoft 365, Adobe, and other installed software…" /></label>
               </div>
               <div className="actions">
                 <button
@@ -649,6 +692,17 @@ export default function Home() {
                   Condition
                   <Tag v={detail.condition} />
                 </div>
+              </div>
+              <h3>Device details</h3>
+              <div className="facts">
+                <div>Company<b>{detail.company || "—"}</b></div>
+                <div>PC / device name<b>{detail.device_name || "—"}</b></div>
+                <div>Operating system<b>{detail.operating_system || "—"}</b></div>
+                <div>Storage type<b>{detail.storage_type || "—"}</b></div>
+                <div>Domain / workgroup<b>{detail.network_group || "—"}</b></div>
+                <div>Previous user<b>{detail.previous_user || "—"}</b></div>
+                <div>Specifications<b>{detail.specifications || "—"}</b></div>
+                <div>Software loaded<b>{detail.installed_software || "—"}</b></div>
               </div>
               <h3>Workflow</h3>
               {detail.status === "available" && (
