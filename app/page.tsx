@@ -170,6 +170,8 @@ export default function Home() {
         a.serial_number,
         a.location,
         a.employees?.name,
+        a.consultant_name,
+        a.consultant_company,
       ]
         .filter(Boolean)
         .join(" ")
@@ -521,7 +523,12 @@ export default function Home() {
                       {expired(a) && <mark>Warranty expired</mark>}
                     </td>
                     <td>
-                      {a.employees ? (
+                      {a.assignment_kind === "consultant" && a.consultant_name ? (
+                        <>
+                          <b>{a.consultant_name}</b>
+                          <small>{a.consultant_company || "Consultant"}</small>
+                        </>
+                      ) : a.employees ? (
                         <>
                           <b>{a.employees.name}</b>
                           <small>{a.employees.department}</small>
@@ -750,7 +757,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="detail-header-actions">
-                  {detail.employees?.name && <span className="detail-assignee"><small>Assigned to</small><b>{detail.employees.name}</b></span>}
+                  {(detail.employees?.name || detail.consultant_name) && <span className="detail-assignee"><small>{detail.assignment_kind === "consultant" ? detail.consultant_company || "Consultant" : "Assigned to"}</small><b>{detail.assignment_kind === "consultant" ? detail.consultant_name : detail.employees?.name}</b></span>}
                   <button className="x" onClick={() => setDetail(null)}>
                     ×
                   </button>
