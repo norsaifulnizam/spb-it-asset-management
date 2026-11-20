@@ -294,9 +294,10 @@ export default function Home() {
     }
     if (f.status === "assigned" && !assignedEmployeeId)
       return setNotice("Choose or enter an assigned user before setting the asset to Assigned.");
-    // A named user always represents a live assignment. This prevents an
-    // edited, previously-disposed asset from silently dropping its assignee.
-    const assetStatus = assignedEmployeeId ? "assigned" : f.status;
+    // Keep the recorded user even for disposed assets. The asset status is
+    // separate from its ownership history, while an available asset with a
+    // named user naturally becomes assigned.
+    const assetStatus = assignedEmployeeId && f.status === "available" ? "assigned" : f.status;
     const data = {
       ...f,
       assigned_user: undefined,
@@ -664,13 +665,13 @@ export default function Home() {
                 />
                 <label>
                   Assigned user
-                  <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value, status: e.target.value.trim() ? "assigned" : f.status })} placeholder="Search or type a new name" />
+                  <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value })} placeholder="Search or type a new name" />
                   <datalist id="employee-names">{people.map((p) => <option key={p.id} value={p.name}>{p.department || "Employee"}</option>)}</datalist>
-                  <small>New names are added to Employees when you save.</small>
+                  <small>New names are added to Employees when you save, including for disposed assets.</small>
                 </label>
                 <label>
                   Status
-                  <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value, assigned_user: e.target.value === "disposed" ? "" : f.assigned_user })}>
+                  <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
                     <option value="available">Available</option>
                     <option value="assigned">Assigned</option>
                     <option value="under_repair">Under repair</option>
