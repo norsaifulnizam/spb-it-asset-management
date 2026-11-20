@@ -591,7 +591,7 @@ export default function Home() {
                     value={f.condition}
                     onChange={(e) => setF({ ...f, condition: e.target.value })}
                   >
-                    {["good", "fair", "poor", "defective"].map((x) => (
+                    {["good", "fair", "poor", "defective", "N/A"].map((x) => (
                       <option key={x}>{x}</option>
                     ))}
                   </select>
