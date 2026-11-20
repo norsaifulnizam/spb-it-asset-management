@@ -387,7 +387,7 @@ export default function Home() {
             ["dashboard", "▦", "Dashboard"],
           ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
           <button className={view === "assets" || view === "servers" ? "on" : ""} onClick={() => setHardwareOpen(!hardwareOpen)}><i>▣</i>Hardware Assets <b className="nav-caret">{hardwareOpen ? "−" : "+"}</b></button>
-          {hardwareOpen && <div className="hardware-subnav">{[["Laptop", "Laptop"], ["Desktop Computer", "Desktop"], ["Monitor", "Monitor"], ["Server", "Server"]].map(([assetType, label]) => <button key={assetType} className={(assetType === "Server" ? view === "servers" : view === "assets" && type === assetType) ? "selected" : ""} onClick={() => { if (assetType === "Server") { setView("servers"); setServerPage(1); } else { setView("assets"); setType(assetType); setAssetPage(1); } }}><i>·</i>{label}</button>)}</div>}
+          {hardwareOpen && <div className="hardware-subnav">{[["Laptop", "Laptop"], ["Desktop Computer", "Desktop"], ["Monitor", "Monitor"], ["Server", "Server"]].map(([assetType, label]) => <button key={assetType} className={(assetType === "Server" ? view === "servers" : view === "assets" && type === assetType) ? "selected" : ""} onClick={() => { if (assetType === "Server") { setView("servers"); setServerPage(1); } else { setView("assets"); setType(assetType); setAssetPage(1); } }}><i>·</i>{label}<b className="asset-count">{assets.filter((asset) => asset.asset_type === assetType).length}</b></button>)}</div>}
           {[
             ["software", "◈", "Software Licences"],
             ["employees", "♙", "Employees"],
