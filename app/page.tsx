@@ -726,9 +726,12 @@ export default function Home() {
                     {detail.asset_type} · {detail.serial_number || "No serial"}
                   </p>
                 </div>
-                <button className="x" onClick={() => setDetail(null)}>
-                  ×
-                </button>
+                <div className="detail-header-actions">
+                  {detail.employees?.name && <span className="detail-assignee"><small>Assigned to</small><b>{detail.employees.name}</b></span>}
+                  <button className="x" onClick={() => setDetail(null)}>
+                    ×
+                  </button>
+                </div>
               </div>
               <div className="facts">
                 <div>
@@ -775,9 +778,6 @@ export default function Home() {
               )}
               {detail.status === "assigned" && (
                 <>
-                  <p>
-                    Assigned to <b>{detail.employees?.name}</b>
-                  </p>
                   <button
                     className="warn"
                     onClick={() => change(detail, "under_repair")}
