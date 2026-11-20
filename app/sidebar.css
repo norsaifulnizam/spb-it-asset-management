@@ -14,3 +14,7 @@
 .detail-assignee small { color: #64748b; font-size: 11px; }
 .detail-assignee b { color: #881337; font-size: 14px; }
 .detail-tag { font-size: 13px; letter-spacing: 1.1px; }
+.hardware-group { display: grid; gap: 2px; margin: 3px 0 7px; }
+.app > aside .hardware-subnav .hardware-group-title { color: #fff; background: #152644; font-size: 13px; font-weight: 800; }
+.app > aside .hardware-subnav .hardware-group-title span { padding-left: 4px; }
+.app > aside .hardware-subnav .hardware-group button:not(.hardware-group-title) { margin-left: 10px; }
