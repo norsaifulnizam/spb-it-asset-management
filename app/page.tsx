@@ -22,6 +22,9 @@ type Asset = {
   storage_type: string | null;
   previous_user: string | null;
   assigned_employee_id: string | null;
+  assignment_kind: string;
+  consultant_name: string | null;
+  consultant_company: string | null;
   status: string;
   notes: string | null;
   employees: Employee | null;
@@ -71,6 +74,9 @@ const empty = {
   storage_type: "",
   previous_user: "",
   assigned_user: "",
+  assignment_kind: "internal",
+  consultant_name: "",
+  consultant_company: "",
   status: "available",
   notes: "",
 };
@@ -96,6 +102,7 @@ export default function Home() {
     [assetPage, setAssetPage] = useState(1),
     [attentionPage, setAttentionPage] = useState(1),
     [employeePage, setEmployeePage] = useState(1),
+    [consultantPage, setConsultantPage] = useState(1),
     [logPage, setLogPage] = useState(1),
     [softwarePage, setSoftwarePage] = useState(1),
     [serverPage, setServerPage] = useState(1),
@@ -180,6 +187,7 @@ export default function Home() {
   const employeeList = people.filter((p) =>
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
+  const consultantAssets = assets.filter((a) => a.assignment_kind === "consultant" && a.consultant_name);
   const softwareList = software.filter((s) => [s.product_name, s.vendor, s.license_type].filter(Boolean).join(" ").toLowerCase().includes(softwareQuery.toLowerCase()));
   const pageItems = <T,>(items: T[], page: number) =>
     items.slice((page - 1) * pageSize, page * pageSize);
@@ -277,6 +285,9 @@ export default function Home() {
       storage_type: a.storage_type || "",
       previous_user: a.previous_user || "",
       assigned_user: a.employees?.name || "",
+      assignment_kind: a.assignment_kind || "internal",
+      consultant_name: a.consultant_name || "",
+      consultant_company: a.consultant_company || "",
       status: a.status,
       notes: a.notes || "",
     });
@@ -286,7 +297,7 @@ export default function Home() {
     if (!f.asset_tag || !f.brand_model)
       return setNotice("Asset tag and brand/model are required.");
     let assignedEmployeeId: string | null = null;
-    const assignedName = f.assigned_user.trim();
+    const assignedName = f.assignment_kind === "internal" ? f.assigned_user.trim() : "";
     if (assignedName) {
       const existing = people.find((p) => p.name.trim().toLowerCase() === assignedName.toLowerCase());
       if (existing) assignedEmployeeId = existing.id;
@@ -317,6 +328,9 @@ export default function Home() {
       network_group: f.network_group || null,
       storage_type: f.storage_type || null,
       previous_user: f.previous_user || null,
+      assignment_kind: f.assignment_kind,
+      consultant_name: f.assignment_kind === "consultant" ? f.consultant_name || null : null,
+      consultant_company: f.assignment_kind === "consultant" ? f.consultant_company || null : null,
       assigned_employee_id: assignedEmployeeId,
       status: assetStatus,
       notes: f.notes || null,
@@ -392,6 +406,7 @@ export default function Home() {
           {[
             ["software", "◈", "Software Licences"],
             ["employees", "♙", "Employees"],
+            ["consultants", "♧", "Consultants"],
             ["maintenance", "⚒", "Maintenance"],
           ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
         </nav>
@@ -579,6 +594,7 @@ export default function Home() {
           </div>
         </div>}
         {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Employee directory</h2><p>Search employee information and assigned assets.</p></div></div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th><th /></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><b>{p.name}</b></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td><td><button className="plain" onClick={() => openEmployee(p)}>View details</button></td></tr>; })}</tbody></table> : <p className="state">No employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
+        {view === "consultants" && <div className="panel"><div className="title"><div><h2>Consultant assignments</h2><p>External people and companies holding SPB assets.</p></div></div>{consultantAssets.length ? <table><thead><tr><th>Consultant</th><th>Company</th><th>Asset</th><th>Location</th><th /></tr></thead><tbody>{pageItems(consultantAssets, consultantPage).map((a) => <tr key={a.id}><td><b>{a.consultant_name}</b></td><td>{a.consultant_company || "Not set"}</td><td><b>{a.asset_tag}</b><small>{a.brand_model}</small></td><td>{a.location || "—"}</td><td><button className="plain" onClick={() => setDetail(a)}>View asset</button></td></tr>)}</tbody></table> : <p className="state">No consultant assets yet.</p>}{consultantAssets.length > 0 && <Pager total={consultantAssets.length} page={consultantPage} setPage={setConsultantPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "software" && <div className="panel software-register"><div className="title"><div><h2>Software licence register</h2><p>Keep subscriptions, licence seats and upcoming renewals together.</p></div><button className="plain" onClick={load}>Refresh</button></div><div className="filters"><input placeholder="Search product, vendor or licence type" value={softwareQuery} onChange={(e) => { setSoftwareQuery(e.target.value); setSoftwarePage(1); }} /></div>{softwareList.length ? <table><thead><tr><th>Software</th><th>Licence type</th><th>Seats</th><th>Renewal</th><th>Annual cost</th><th /></tr></thead><tbody>{pageItems(softwareList, softwarePage).map((s) => <tr key={s.id}><td><b>{s.product_name}</b><small>{s.vendor || "Vendor not set"}</small></td><td><Tag v={s.license_type} /></td><td><b>{s.assigned_seats} / {s.total_seats}</b><small>{s.total_seats - s.assigned_seats} available</small></td><td>{s.renewal_date || "Not set"}</td><td>{s.annual_cost == null ? "—" : `RM ${s.annual_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td><td><button className="plain" onClick={() => editSoftware(s)}>Edit</button></td></tr>)}</tbody></table> : <p className="state">No software licences match your search.</p>}{softwareList.length > 0 && <Pager total={softwareList.length} page={softwarePage} setPage={setSoftwarePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "maintenance" && <div className="panel maintenance-list"><div className="title"><div><h2>Service history</h2><p>Repairs and maintenance entries across all assets.</p></div></div>{logs.length ? pageItems(logs, logPage).map((l) => { const asset = assets.find(a => a.id === l.asset_id); return <div className="log" key={l.id}><Tag v={l.log_type}/><span><b>{asset?.asset_tag || "Asset removed"}</b>{l.description}</span><small>{l.logged_date}</small></div>}) : <p className="state">No maintenance history yet.</p>}{logs.length > 0 && <Pager total={logs.length} page={logPage} setPage={setLogPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {edit !== undefined && (
@@ -668,11 +684,16 @@ export default function Home() {
                   set={(v) => setF({ ...f, location: v })}
                 />
                 <label>
+                  Assignment type
+                  <select value={f.assignment_kind} onChange={(e) => setF({ ...f, assignment_kind: e.target.value })}><option value="internal">Internal staff</option><option value="consultant">Consultant / external</option></select>
+                </label>
+                {f.assignment_kind === "internal" ? <label>
                   Assigned user
                   <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value })} placeholder="Search or type a new name" />
                   <datalist id="employee-names">{people.map((p) => <option key={p.id} value={p.name}>{p.department || "Employee"}</option>)}</datalist>
-                  <small>New names are added to Employees when you save, including for disposed assets.</small>
-                </label>
+                  <small>New names are added to Employees when you save.</small>
+                </label> : <Input l="Consultant name" v={f.consultant_name} set={(v) => setF({ ...f, consultant_name: v })} />}
+                {f.assignment_kind === "consultant" && <Input l="Consultant company" v={f.consultant_company} set={(v) => setF({ ...f, consultant_company: v })} />}
                 <label>
                   Status
                   <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
