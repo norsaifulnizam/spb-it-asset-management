@@ -107,7 +107,7 @@ export default function Home() {
     [consultantOpen, setConsultantOpen] = useState(false),
     [laptopAssignmentsOpen, setLaptopAssignmentsOpen] = useState(false),
     [desktopAssignmentsOpen, setDesktopAssignmentsOpen] = useState(false),
-    [pageSize, setPageSize] = useState(10),
+    [pageSize, setPageSize] = useState(5),
     [assetPage, setAssetPage] = useState(1),
     [attentionPage, setAttentionPage] = useState(1),
     [attentionTab, setAttentionTab] = useState("all"),
@@ -937,7 +937,7 @@ function Pager(p: { total: number; page: number; setPage: (page: number) => void
   const pages = Math.max(1, Math.ceil(p.total / p.pageSize));
   const start = (p.page - 1) * p.pageSize + 1;
   const end = Math.min(p.page * p.pageSize, p.total);
-  return <div className="pager"><small>Showing {start}–{end} of {p.total}</small><label>Show <select value={p.pageSize} onChange={(e) => { p.setPageSize(Number(e.target.value)); p.setPage(1); }}><option value={10}>10</option><option value={20}>20</option><option value={30}>30</option><option value={50}>50</option></select></label><div><button className="plain" disabled={p.page === 1} onClick={() => p.setPage(p.page - 1)}>Previous</button><span>{p.page} / {pages}</span><button className="plain" disabled={p.page === pages} onClick={() => p.setPage(p.page + 1)}>Next</button></div></div>;
+  return <div className="pager"><small>Showing {start}–{end} of {p.total}</small><label>Show <select value={p.pageSize} onChange={(e) => { p.setPageSize(Number(e.target.value)); p.setPage(1); }}><option value={5}>5</option><option value={10}>10</option><option value={20}>20</option><option value={30}>30</option><option value={50}>50</option></select></label><div><button className="plain" disabled={p.page === 1} onClick={() => p.setPage(p.page - 1)}>Previous</button><span>{p.page} / {pages}</span><button className="plain" disabled={p.page === pages} onClick={() => p.setPage(p.page + 1)}>Next</button></div></div>;
 }
 function Tag(p: { v: string }) {
   return (
