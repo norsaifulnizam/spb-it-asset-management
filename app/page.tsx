@@ -94,7 +94,7 @@ export default function Home() {
     [q, setQ] = useState(""),
     [status, setStatus] = useState("all"),
     [type, setType] = useState("all"),
-    [assetScope, setAssetScope] = useState<"spb" | "consultant">("spb"),
+    [assetScope, setAssetScope] = useState<"spb" | "consultant" | "disposed">("spb"),
     [location, setLocation] = useState("all"),
     [year, setYear] = useState("all"),
     [view, setView] = useState("dashboard"),
@@ -159,7 +159,7 @@ export default function Home() {
   const list = assets.filter(
     (a) =>
       (status === "all" || a.status === status) &&
-      (assetScope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant") &&
+      (assetScope === "disposed" || (a.status !== "disposed" && (assetScope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant"))) &&
       (type === "all" || (type === "mobile" ? ["Tablet", "Phone"].includes(a.asset_type) : a.asset_type === type)) &&
       (location === "all" || a.location === location) &&
       (year === "all" || a.purchase_date?.slice(0, 4) === year) &&
@@ -406,7 +406,7 @@ export default function Home() {
             ["dashboard", "▦", "Dashboard"],
           ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
           <button className={view === "assets" || view === "servers" ? "on" : ""} onClick={() => setHardwareOpen(!hardwareOpen)}><i>▣</i>Hardware Assets <b className="nav-caret">{hardwareOpen ? "−" : "+"}</b></button>
-          {hardwareOpen && <div className="hardware-subnav">{([['spb','SPB',[['Laptop','Laptop'],['Desktop Computer','Desktop'],['Monitor','Monitor'],['Server','Server'],['Printer','Printer'],['mobile','Tablet / Phone']]],['consultant','Consultant',[['Laptop','Laptop'],['Desktop Computer','Desktop'],['Monitor','Monitor'],['Printer','Printer']]]] as const).map(([scope, label, types]) => <div className="hardware-group" key={scope}><button className="hardware-group-title" onClick={() => { setView("assets"); setAssetScope(scope); setType("all"); setAssetPage(1); }}><span>{label}</span><b className="asset-count">{assets.filter(a => scope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant").length}</b></button>{types.map(([assetType, typeLabel]) => <button key={assetType} className={view === "assets" && assetScope === scope && type === assetType ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope(scope); setType(assetType); setAssetPage(1); }}><i>·</i>{typeLabel}<b className="asset-count">{assets.filter(a => (scope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant") && (assetType === "mobile" ? ["Tablet", "Phone"].includes(a.asset_type) : a.asset_type === assetType)).length}</b></button>)}</div>)}</div>}
+          {hardwareOpen && <div className="hardware-subnav">{([['spb','SPB',[['Laptop','Laptop'],['Desktop Computer','Desktop'],['Monitor','Monitor'],['Server','Server'],['Printer','Printer'],['mobile','Tablet / Phone']]],['consultant','Consultant',[['Laptop','Laptop'],['Desktop Computer','Desktop'],['Monitor','Monitor'],['Printer','Printer']]]] as const).map(([scope, label, types]) => <div className="hardware-group" key={scope}><button className="hardware-group-title" onClick={() => { setView("assets"); setAssetScope(scope); setType("all"); setStatus("all"); setAssetPage(1); }}><span>{label}</span><b className="asset-count">{assets.filter(a => a.status !== "disposed" && (scope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant")).length}</b></button>{types.map(([assetType, typeLabel]) => <button key={assetType} className={view === "assets" && assetScope === scope && type === assetType ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope(scope); setType(assetType); setStatus("all"); setAssetPage(1); }}><i>·</i>{typeLabel}<b className="asset-count">{assets.filter(a => a.status !== "disposed" && (scope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant") && (assetType === "mobile" ? ["Tablet", "Phone"].includes(a.asset_type) : a.asset_type === assetType)).length}</b></button>)}{scope === "spb" && <button className={view === "assets" && assetScope === "disposed" ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope("disposed"); setType("all"); setStatus("disposed"); setAssetPage(1); }}><i>·</i>Disposed<b className="asset-count">{assets.filter(a => a.status === "disposed").length}</b></button>}</div>)}</div>}
           {[
             ["software", "◈", "Software Licences"],
             ["employees", "♙", "Employees"],
