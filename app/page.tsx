@@ -776,6 +776,8 @@ export default function Home() {
                   <Tag v={detail.condition} />
                 </div>
               </div>
+              <h3>Remarks / notes</h3>
+              <div className="remarks-detail">{detail.notes || "No remarks recorded for this asset."}</div>
               <h3>Device details</h3>
               <div className="facts">
                 <div>Company<b>{detail.company || "—"}</b></div>
