@@ -1,0 +1,7 @@
+.software-assignment-list{display:grid;gap:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
+.software-assignment-list>div{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border-top:1px solid #e8edf5}
+.software-assignment-list>div:first-child{border-top:0}
+.software-assignment-list span{min-width:0}
+.software-assignment-list b,.software-assignment-list small{display:block}
+.software-assignment-list b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.software-assignment-list .plain{flex:none;font-size:12px}
