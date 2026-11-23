@@ -19,3 +19,5 @@
 .app > aside .hardware-subnav .hardware-group-title { color: #fff; background: #152644; font-size: 13px; font-weight: 800; }
 .app > aside .hardware-subnav .hardware-group-title span { padding-left: 4px; }
 .app > aside .hardware-subnav .hardware-group button:not(.hardware-group-title) { margin-left: 10px; }
+.app > aside .hardware-subnav .assignment-subnav { display: grid; gap: 2px; margin: 2px 0 3px 22px; padding-left: 9px; border-left: 1px solid #31435f; }
+.app > aside .hardware-subnav .assignment-subnav button { margin-left: 0; font-size: 12px; }
