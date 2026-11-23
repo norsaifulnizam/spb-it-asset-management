@@ -5,3 +5,21 @@
 .software-assignment-list b,.software-assignment-list small{display:block}
 .software-assignment-list b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .software-assignment-list .plain{flex:none;font-size:12px}
+.employee-detail-form{width:min(860px,100%)!important}
+.employee-detail-title{padding:8px 0 18px;border-bottom:1px solid #e8edf5}
+.employee-detail-title em{font-size:12px;letter-spacing:1.6px}
+.employee-detail-title h2{margin-top:5px;color:#881337;font-size:25px;letter-spacing:-.6px}
+.employee-detail-title p{font-size:13px}
+.employee-section{padding:18px 0;border-bottom:1px solid #e8edf5}
+.employee-section h3{margin:0 0 12px;font-size:15px}
+.employee-section .form{margin-top:0}
+.employee-section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:12px}
+.employee-section-heading h3{margin:0}
+.employee-section-heading label{width:min(290px,100%)}
+.employee-resource-list{display:grid;gap:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
+.employee-resource-list>div{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border-top:1px solid #e8edf5}
+.employee-resource-list>div:first-child{border-top:0}
+.employee-resource-list b,.employee-resource-list small{display:block}
+.employee-resource-list b{font-size:13px}
+.employee-resource-list .plain{flex:none;font-size:12px}
+@media(max-width:620px){.employee-section-heading{display:grid;align-items:stretch}.employee-section-heading label{width:100%}}
