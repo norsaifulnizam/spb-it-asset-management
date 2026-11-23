@@ -171,7 +171,15 @@ export default function Home() {
   const assignedAssets = activeAssets.filter((a) => a.status === "assigned");
   const availableAssets = activeAssets.filter((a) => a.status === "available");
   const repairAssets = activeAssets.filter((a) => a.status === "under_repair");
-  const disposedAssets = assets.filter((a) => a.status === "disposed");
+  const spbAssets = assets.filter((a) => a.assignment_kind !== "consultant");
+  const consultantAssetsForDashboard = assets.filter((a) => a.assignment_kind === "consultant");
+  const ownershipStatus = (group: Asset[]) => [
+    ["Active", group.filter((a) => a.status !== "disposed").length],
+    ["Assigned", group.filter((a) => a.status === "assigned").length],
+    ["Available", group.filter((a) => a.status === "available").length],
+    ["Under repair", group.filter((a) => a.status === "under_repair").length],
+    ["Disposed", group.filter((a) => a.status === "disposed").length],
+  ];
   const list = assets.filter(
     (a) =>
       (status === "all" || a.status === status) &&
@@ -478,13 +486,9 @@ export default function Home() {
             <span onClick={() => setNotice("")}>×</span>
           </div>
         )}
-        {view === "dashboard" && <><div className="stats">
-          <Card t="Active assets" n={activeAssets.length} icon="▣" />
-          <Card t="Assigned" n={assignedAssets.length} icon="♙" />
-          <Card t="Available" n={availableAssets.length} icon="✓" />
-          <Card t="Under repair" n={repairAssets.length} icon="⚒" />
-          <Card t="Disposed" n={disposedAssets.length} icon="◈" />
-        </div></>}
+        {view === "dashboard" && <div className="ownership-stats">
+          {[["SPB assets", spbAssets], ["Consultant assets", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map(([statusLabel, total]) => <span key={statusLabel as string}>{statusLabel as string}<b>{total as number}</b></span>)}</div></div>)}
+        </div>}
         {view === "assets" && <div className="panel">
           <div className="title">
             <div>

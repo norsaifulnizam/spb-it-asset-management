@@ -19,6 +19,13 @@
 .dashboard-breakdown h3 { margin: 0 0 10px; }
 .dashboard-breakdown div { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e8edf5; color: #64748b; }
 .dashboard-breakdown b { color: #17233a; }
+.ownership-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0 0 18px; }
+.ownership-card { overflow: hidden; border: 1px solid #dbe3ef; border-radius: 13px; background: #fff; box-shadow: 0 5px 18px #1e293b0c; }
+.ownership-card h2 { padding: 17px 20px; color: #881337; border-bottom: 1px solid #e8edf5; font-size: 16px; }
+.ownership-card > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.ownership-card span { display: grid; gap: 5px; padding: 14px 12px; color: #64748b; border-right: 1px solid #e8edf5; font-size: 12px; }
+.ownership-card span:last-child { border-right: 0; }
+.ownership-card b { color: #17233a; font-size: 23px; }
 .attention-tabs { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 20px 14px; border-bottom: 1px solid #e8edf5; }
 .attention-tabs button { padding: 7px 10px; color: #475569; background: #f1f5f9; box-shadow: none; font-size: 12px; }
 .attention-tabs button:hover, .attention-tabs button.on { color: #fff; background: #881337; }
@@ -29,3 +36,4 @@
 .app > aside .hardware-subnav .hardware-group button:not(.hardware-group-title) { margin-left: 10px; }
 .app > aside .hardware-subnav .assignment-subnav { display: grid; gap: 2px; margin: 2px 0 3px 22px; padding-left: 9px; border-left: 1px solid #31435f; }
 .app > aside .hardware-subnav .assignment-subnav button { margin-left: 0; font-size: 12px; }
+@media (max-width: 720px) { .ownership-stats { grid-template-columns: 1fr; } .ownership-card > div { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ownership-card span:nth-child(3) { border-right: 0; } }
