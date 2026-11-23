@@ -160,6 +160,17 @@ export default function Home() {
   const expired = (a: Asset) =>
     !!a.warranty_expiry &&
     new Date(a.warranty_expiry + "T00:00:00") < new Date();
+  const laptopDueForReplacement = (a: Asset) => {
+    if (a.asset_type !== "Laptop" || !a.purchase_date) return false;
+    const replacementDate = new Date();
+    replacementDate.setFullYear(replacementDate.getFullYear() - 4);
+    return new Date(a.purchase_date + "T00:00:00") <= replacementDate;
+  };
+  const activeAssets = assets.filter((a) => a.status !== "disposed");
+  const assignedAssets = activeAssets.filter((a) => a.status === "assigned");
+  const availableAssets = activeAssets.filter((a) => a.status === "available");
+  const repairAssets = activeAssets.filter((a) => a.status === "under_repair");
+  const disposedAssets = assets.filter((a) => a.status === "disposed");
   const list = assets.filter(
     (a) =>
       (status === "all" || a.status === status) &&
@@ -185,11 +196,18 @@ export default function Home() {
   const purchaseYears = [...new Set(assets.map((a) => a.purchase_date?.slice(0, 4)).filter(Boolean))].sort().reverse();
   const attention = assets.filter(
     (a) =>
-      a.status === "under_repair" ||
+      a.status !== "disposed" &&
+      (a.status === "under_repair" ||
       a.condition === "poor" ||
       a.condition === "defective" ||
-      expired(a),
+      expired(a) ||
+      laptopDueForReplacement(a)),
   );
+  const attentionReason = (a: Asset) =>
+    a.status === "under_repair" ? "Under repair" :
+    a.condition === "poor" || a.condition === "defective" ? `Condition: ${a.condition}` :
+    expired(a) ? "Warranty expired" :
+    "Laptop over 4 years — replacement review";
   const attentionPages = Math.max(1, Math.ceil(attention.length / 10));
   const attentionItems = attention.slice((attentionPage - 1) * 10, attentionPage * 10);
   const employeeList = people.filter((p) =>
@@ -445,27 +463,18 @@ export default function Home() {
           {view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
           {view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
         </header>
-        {notice && (
+        {notice && view !== "dashboard" && (
           <div className="notice">
             {notice}
             <span onClick={() => setNotice("")}>×</span>
           </div>
         )}
         {view === "dashboard" && <><div className="stats">
-          <Card t="Total assets" n={assets.length} icon="▣" />
-          <Card
-            t="Assigned"
-            n={assets.filter((x) => x.status === "assigned").length} icon="♙"
-          />
-          <Card
-            t="Available"
-            n={assets.filter((x) => x.status === "available").length} icon="✓"
-          />
-          <Card
-            t="Under repair"
-            n={assets.filter((x) => x.status === "under_repair").length} icon="⚒"
-          />
-          <Card t="Software licences" n={software.length} icon="◈" />
+          <Card t="Active assets" n={activeAssets.length} icon="▣" />
+          <Card t="Assigned" n={assignedAssets.length} icon="♙" />
+          <Card t="Available" n={availableAssets.length} icon="✓" />
+          <Card t="Under repair" n={repairAssets.length} icon="⚒" />
+          <Card t="Disposed" n={disposedAssets.length} icon="◈" />
         </div></>}
         {view === "assets" && <div className="panel">
           <div className="title">
@@ -580,7 +589,7 @@ export default function Home() {
             <div className="title">
               <div>
                 <h2>Needs attention</h2>
-                <p>Repair, condition and warranty follow-up.</p>
+                <p>Repair, condition, warranty and replacement follow-up.</p>
               </div>
             </div>
             {attention.length ? (
@@ -591,13 +600,7 @@ export default function Home() {
                     <b>
                       {a.asset_tag} · {a.brand_model}
                     </b>
-                    <small>
-                      {a.status === "under_repair"
-                        ? "Under repair"
-                        : expired(a)
-                          ? "Warranty expired"
-                          : `Condition: ${a.condition}`}
-                    </small>
+                    <small>{attentionReason(a)}</small>
                   </span>
                 </a>
               ))}{attention.length > 10 && <div className="pager"><small>Showing {(attentionPage - 1) * 10 + 1}–{Math.min(attentionPage * 10, attention.length)} of {attention.length}</small><div><button className="plain" disabled={attentionPage === 1} onClick={() => setAttentionPage(attentionPage - 1)}>Previous</button><span>{attentionPage} / {attentionPages}</span><button className="plain" disabled={attentionPage === attentionPages} onClick={() => setAttentionPage(attentionPage + 1)}>Next</button></div></div>}</>
@@ -613,10 +616,14 @@ export default function Home() {
               </div>
             </div>
             <div className="status-summary">
-              <strong>{assets.length ? Math.round((assets.filter(x => x.status === "assigned").length / assets.length) * 100) : 0}%</strong>
-              <span>of registered assets are assigned</span>
-              <div><b style={{width: `${assets.length ? (assets.filter(x => x.status === "assigned").length / assets.length) * 100 : 0}%`}} /></div>
-              <small>{assets.filter(x => x.status === "available").length} available · {assets.filter(x => x.status === "under_repair").length} under repair</small>
+              <strong>{activeAssets.length ? Math.round((assignedAssets.length / activeAssets.length) * 100) : 0}%</strong>
+              <span>of active assets are assigned</span>
+              <div><b style={{width: `${activeAssets.length ? (assignedAssets.length / activeAssets.length) * 100 : 0}%`}} /></div>
+              <small>{availableAssets.length} available · {repairAssets.length} under repair</small>
+            </div>
+            <div className="dashboard-breakdown">
+              <h3>Hardware by type</h3>
+              {[["Laptop", "Laptop"], ["Desktop Computer", "Desktop"], ["Monitor", "Monitor"], ["Server", "Server"], ["Printer", "Printer"], ["Phone", "Tablet / Phone"]].map(([assetType, label]) => <div key={assetType}><span>{label}</span><b>{activeAssets.filter(a => assetType === "Phone" ? ["Phone", "Tablet"].includes(a.asset_type) : a.asset_type === assetType).length}</b></div>)}
             </div>
           </div>
         </div>}
