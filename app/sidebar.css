@@ -19,6 +19,10 @@
 .dashboard-breakdown h3 { margin: 0 0 10px; }
 .dashboard-breakdown div { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e8edf5; color: #64748b; }
 .dashboard-breakdown b { color: #17233a; }
+.attention-tabs { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 20px 14px; border-bottom: 1px solid #e8edf5; }
+.attention-tabs button { padding: 7px 10px; color: #475569; background: #f1f5f9; box-shadow: none; font-size: 12px; }
+.attention-tabs button:hover, .attention-tabs button.on { color: #fff; background: #881337; }
+.attention-tabs button b { margin-left: 6px; color: inherit; }
 .hardware-group { display: grid; gap: 2px; margin: 3px 0 7px; }
 .app > aside .hardware-subnav .hardware-group-title { color: #fff; background: #152644; font-size: 13px; font-weight: 800; }
 .app > aside .hardware-subnav .hardware-group-title span { padding-left: 4px; }

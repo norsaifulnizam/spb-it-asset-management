@@ -106,6 +106,7 @@ export default function Home() {
     [pageSize, setPageSize] = useState(10),
     [assetPage, setAssetPage] = useState(1),
     [attentionPage, setAttentionPage] = useState(1),
+    [attentionTab, setAttentionTab] = useState("all"),
     [employeePage, setEmployeePage] = useState(1),
     [consultantPage, setConsultantPage] = useState(1),
     [logPage, setLogPage] = useState(1),
@@ -208,8 +209,16 @@ export default function Home() {
     a.condition === "poor" || a.condition === "defective" ? `Condition: ${a.condition}` :
     expired(a) ? "Warranty expired" :
     "Laptop over 4 years — replacement review";
-  const attentionPages = Math.max(1, Math.ceil(attention.length / 10));
-  const attentionItems = attention.slice((attentionPage - 1) * 10, attentionPage * 10);
+  const attentionTabs = [
+    ["all", "All", attention],
+    ["replacement", "Replacement due", attention.filter(laptopDueForReplacement)],
+    ["warranty", "Warranty expired", attention.filter(expired)],
+    ["repair", "Under repair", attention.filter((a) => a.status === "under_repair")],
+    ["condition", "Poor condition", attention.filter((a) => a.condition === "poor" || a.condition === "defective")],
+  ] as const;
+  const selectedAttention = attentionTabs.find(([key]) => key === attentionTab)?.[2] || attention;
+  const attentionPages = Math.max(1, Math.ceil(selectedAttention.length / 10));
+  const attentionItems = selectedAttention.slice((attentionPage - 1) * 10, attentionPage * 10);
   const employeeList = people.filter((p) =>
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
@@ -592,7 +601,8 @@ export default function Home() {
                 <p>Repair, condition, warranty and replacement follow-up.</p>
               </div>
             </div>
-            {attention.length ? (
+            <div className="attention-tabs">{attentionTabs.map(([key, label, items]) => <button key={key} className={attentionTab === key ? "on" : ""} onClick={() => { setAttentionTab(key); setAttentionPage(1); }}>{label}<b>{items.length}</b></button>)}</div>
+            {selectedAttention.length ? (
               <>{attentionItems.map((a) => (
                 <a className="row" key={a.id} onClick={() => setDetail(a)}>
                   <i />{" "}
@@ -603,9 +613,9 @@ export default function Home() {
                     <small>{attentionReason(a)}</small>
                   </span>
                 </a>
-              ))}{attention.length > 10 && <div className="pager"><small>Showing {(attentionPage - 1) * 10 + 1}–{Math.min(attentionPage * 10, attention.length)} of {attention.length}</small><div><button className="plain" disabled={attentionPage === 1} onClick={() => setAttentionPage(attentionPage - 1)}>Previous</button><span>{attentionPage} / {attentionPages}</span><button className="plain" disabled={attentionPage === attentionPages} onClick={() => setAttentionPage(attentionPage + 1)}>Next</button></div></div>}</>
+              ))}{selectedAttention.length > 10 && <div className="pager"><small>Showing {(attentionPage - 1) * 10 + 1}–{Math.min(attentionPage * 10, selectedAttention.length)} of {selectedAttention.length}</small><div><button className="plain" disabled={attentionPage === 1} onClick={() => setAttentionPage(attentionPage - 1)}>Previous</button><span>{attentionPage} / {attentionPages}</span><button className="plain" disabled={attentionPage === attentionPages} onClick={() => setAttentionPage(attentionPage + 1)}>Next</button></div></div>}</>
             ) : (
-              <p className="state">Everything looks good.</p>
+              <p className="state">No assets in this attention category.</p>
             )}
           </div>
           <div className="panel dashboard-summary">
