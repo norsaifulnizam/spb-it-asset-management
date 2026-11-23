@@ -102,6 +102,8 @@ export default function Home() {
     [location, setLocation] = useState("all"),
     [year, setYear] = useState("all"),
     [view, setView] = useState("dashboard"),
+    [accessView, setAccessView] = useState<"admin" | "user">("admin"),
+    [previewEmployeeId, setPreviewEmployeeId] = useState(""),
     [hardwareOpen, setHardwareOpen] = useState(false),
     [spbOpen, setSpbOpen] = useState(false),
     [consultantOpen, setConsultantOpen] = useState(false),
@@ -459,6 +461,12 @@ export default function Home() {
       load();
     }
   }
+  if (accessView === "user") {
+    const previewEmployee = people.find((person) => person.id === previewEmployeeId);
+    const myAssets = assets.filter((asset) => asset.assigned_employee_id === previewEmployeeId);
+    const mySoftware = softwareAssignments.filter((assignment) => assignment.employee_id === previewEmployeeId).map((assignment) => ({ assignment, license: software.find((license) => license.id === assignment.software_license_id) })).filter((item) => item.license);
+    return <main className="user-portal"><header><div><em>SPB IT ASSET MANAGEMENT · USER VIEW</em><h1>My IT assets</h1><p>Read-only view of the hardware and software assigned to you.</p></div><button className="plain" onClick={() => setAccessView("admin")}>Return to Admin</button></header><section className="user-profile-picker"><label>Viewing as employee<select value={previewEmployeeId} onChange={(e) => setPreviewEmployeeId(e.target.value)}><option value="">Select employee…</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}{person.department ? ` — ${person.department}` : ""}</option>)}</select></label></section>{previewEmployee ? <><div className="user-welcome"><b>{previewEmployee.name}</b><span>{previewEmployee.department || "Department not set"} · {previewEmployee.office_location || "Office location not set"}</span></div><div className="user-grid"><section className="panel"><div className="title"><div><h2>My hardware</h2><p>{myAssets.length} item(s) assigned to you.</p></div></div><div className="user-resource-list">{myAssets.map((asset) => <div key={asset.id}><span><b>{asset.asset_tag}</b><small>{asset.brand_model} · {asset.asset_type}</small></span><span><Tag v={asset.status} /></span></div>)}{!myAssets.length && <p className="state">No hardware assigned.</p>}</div></section><section className="panel"><div className="title"><div><h2>My software licences</h2><p>{mySoftware.length} licence(s) assigned to you.</p></div></div><div className="user-resource-list">{mySoftware.map(({ assignment, license }) => <div key={assignment.id}><span><b>{license!.product_name}</b><small>{license!.company || "SPB"} · {license!.license_type}</small></span><small>Assigned {new Date(assignment.assigned_at).toLocaleDateString()}</small></div>)}{!mySoftware.length && <p className="state">No software licences assigned.</p>}</div></section></div></> : <p className="state">Select an employee to preview the user view.</p>}</main>;
+  }
   return (
     <main className="app">
       <aside>
@@ -499,6 +507,7 @@ export default function Home() {
         </small>
       </aside>
       <section>
+        <button className="user-preview-launch plain" onClick={() => { setPreviewEmployeeId(people[0]?.id || ""); setAccessView("user"); }}>View as user</button>
         <header>
           <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
           {view === "assets" && <button onClick={() => newAsset()}>+ Register hardware</button>}

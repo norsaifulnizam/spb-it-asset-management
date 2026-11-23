@@ -23,3 +23,11 @@
 .employee-resource-list b{font-size:13px}
 .employee-resource-list .plain{flex:none;font-size:12px}
 @media(max-width:620px){.employee-section-heading{display:grid;align-items:stretch}.employee-section-heading label{width:100%}}
+.user-preview-launch{float:right;margin-bottom:-38px}
+.user-portal{max-width:1120px;margin:0 auto;padding:48px clamp(22px,4vw,58px)}
+.user-profile-picker{max-width:520px;margin:0 0 20px;padding:18px;border:1px solid #dbe3ef;border-radius:12px;background:#fff}
+.user-profile-picker label{font-size:13px}.user-profile-picker select{margin-top:7px}
+.user-welcome{display:flex;justify-content:space-between;gap:16px;margin-bottom:18px;padding:17px 20px;border-left:4px solid #881337;border-radius:8px;background:#fff1f2}.user-welcome b{font-size:17px}.user-welcome span{color:#64748b}
+.user-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.user-resource-list{display:grid}.user-resource-list>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid #e8edf5}.user-resource-list b,.user-resource-list small{display:block}.user-resource-list b{font-size:14px}
+@media(max-width:720px){.user-grid{grid-template-columns:1fr}.user-preview-launch{float:none;margin:0 0 16px}.user-welcome{display:grid}}
