@@ -15,6 +15,7 @@
 .detail-assignee b { color: #881337; font-size: 14px; }
 .detail-tag { font-size: 13px; letter-spacing: 1.1px; }
 .remarks-detail { min-height: 48px; padding: 11px 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; background: #f8fafc; line-height: 1.5; white-space: pre-wrap; }
+.dashboard-eyebrow{font-size:13px!important;letter-spacing:1.6px!important}
 .dashboard-breakdown { padding: 0 22px 24px; }
 .dashboard-breakdown h3 { margin: 0 0 10px; }
 .dashboard-breakdown div { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e8edf5; color: #64748b; }
