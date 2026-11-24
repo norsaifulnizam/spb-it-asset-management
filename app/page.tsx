@@ -187,7 +187,7 @@ export default function Home() {
     }
     loadProfile();
   }, [db]);
-  useEffect(() => { if (profile?.role === "admin") load(); }, [profile]);
+  useEffect(() => { if (profile) load(); }, [profile]);
   async function createStaffAccount(e: FormEvent) {
     e.preventDefault();
     const { data } = await db.auth.getSession();
@@ -512,10 +512,10 @@ export default function Home() {
   }
   if (!profileReady) return <main className="user-portal"><p className="state">Checking your access…</p></main>;
   async function signOut() { await db.auth.signOut(); window.location.assign("/login"); }
-  if (profile?.role !== "admin") return <StaffPortal displayName={account.name} email={account.email} />;
+  const viewer = profile?.role !== "admin";
   if (accessView === "user") return <StaffPortal isAdmin onAdminConsole={() => setAccessView("admin")} displayName={account.name} email={account.email} />;
   return (
-    <><div className="account-bar"><div><b>•&nbsp; Hi {account.name}</b><small>{account.email}</small></div><div><button onClick={() => setAccessView("user")}>Availability</button><button className="account-active">Admin console</button><button onClick={signOut}>Sign out</button></div></div><main className="app">
+    <><div className="account-bar"><div><b>•&nbsp; Hi {account.name}</b><small>{account.email}</small></div><div>{viewer ? <button className="account-active">Availability</button> : <><button onClick={() => setAccessView("user")}>Availability</button><button className="account-active">Admin console</button></>}<button onClick={signOut}>Sign out</button></div></div><main className={`app${viewer ? " viewer-console" : ""}`}>
       <aside>
         <b>
           <i>⌘</i>AssetFlow
@@ -540,13 +540,13 @@ export default function Home() {
               </>}
             </div>)}
           </div>}
-          {[
+          {([
             ["software", "◈", "Software Licences"],
             ["employees", "♙", "Employees"],
             ["consultants", "♧", "Consultants"],
             ["maintenance", "⚒", "Maintenance"],
             ["users", "♙", "User accounts"],
-          ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
+          ] as string[][]).filter(([item]) => !viewer || item !== "users").map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
         </nav>
         <small>
           SELANGOR PROPERTIES
@@ -556,10 +556,10 @@ export default function Home() {
       </aside>
       <section>
         <header>
-          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : view === "users" ? "User accounts" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "users" ? "Create sign-in access and link staff to their employee record." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
-          {view === "assets" && <button onClick={() => newAsset()}>+ Register hardware</button>}
-          {view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
-          {view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
+          <div><em>{viewer ? "SPB IT ASSET MANAGEMENT · AVAILABILITY" : `SPB IT OPERATIONS · ${view.toUpperCase()}`}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : view === "users" ? "User accounts" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "users" ? "Create sign-in access and link staff to their employee record." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
+          {!viewer && view === "assets" && <button onClick={() => newAsset()}>+ Register hardware</button>}
+          {!viewer && view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
+          {!viewer && view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
         </header>
         {notice && view !== "dashboard" && (
           <div className="notice">

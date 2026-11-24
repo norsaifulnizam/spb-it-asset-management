@@ -37,3 +37,10 @@
 .app > aside .hardware-subnav .assignment-subnav { display: grid; gap: 2px; margin: 2px 0 3px 22px; padding-left: 9px; border-left: 1px solid #31435f; }
 .app > aside .hardware-subnav .assignment-subnav button { margin-left: 0; font-size: 12px; }
 @media (max-width: 720px) { .ownership-stats { grid-template-columns: 1fr; } .ownership-card > div { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ownership-card span:nth-child(3) { border-right: 0; } }
+
+/* Viewer uses the identical console layout, with all management controls removed. */
+.viewer-console > section > header > button,
+.viewer-console > section .panel > .title > button,
+.viewer-console > section table button,
+.viewer-console > section .form-actions,
+.viewer-console > section .user-preview-launch { display: none !important; }
