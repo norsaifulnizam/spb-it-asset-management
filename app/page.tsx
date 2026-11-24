@@ -910,7 +910,7 @@ export default function Home() {
                 <div>Specifications<b>{detail.specifications || "—"}</b></div>
                 <div>Software loaded<b>{detail.installed_software || "—"}</b></div>
               </div>
-              <h3>Workflow</h3>
+              {!viewer && <><h3>Workflow</h3>
               {detail.status === "available" && (
                 <label>
                   Assign to employee
@@ -949,7 +949,7 @@ export default function Home() {
                 <button onClick={() => change(detail, "available")}>
                   Mark available / returned
                 </button>
-              )}
+              )}</>}
               <h3>Maintenance history</h3>
               {logs
                 .filter((x) => x.asset_id === detail.id)
@@ -963,14 +963,14 @@ export default function Home() {
               {!logs.some((x) => x.asset_id === detail.id) && (
                 <small>No maintenance history yet.</small>
               )}
-              <div className="actions">
+              {!viewer && <div className="actions">
                 <button className="plain" onClick={() => editing(detail)}>
                   Edit asset
                 </button>
                 <button className="delete" onClick={() => del(detail)}>
                   Delete asset
                 </button>
-              </div>
+              </div>}
             </div>
           </div>
         )}
