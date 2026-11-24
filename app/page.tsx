@@ -240,12 +240,16 @@ export default function Home() {
   const spbAssets = dashboardDevices.filter((a) => a.assignment_kind !== "consultant");
   const consultantAssetsForDashboard = dashboardDevices.filter((a) => a.assignment_kind === "consultant");
   const ownershipStatus = (group: Asset[]) => [
-    ["Active", group.filter((a) => a.status !== "disposed").length],
-    ["Assigned", group.filter((a) => a.status === "assigned").length],
-    ["Available", group.filter((a) => a.status === "available").length],
-    ["Under repair", group.filter((a) => a.status === "under_repair").length],
-    ["Disposed", group.filter((a) => a.status === "disposed").length],
-  ];
+    ["Active", group.filter((a) => a.status !== "disposed")],
+    ["Assigned", group.filter((a) => a.status === "assigned")],
+    ["Available", group.filter((a) => a.status === "available")],
+    ["Under repair", group.filter((a) => a.status === "under_repair")],
+    ["Disposed", group.filter((a) => a.status === "disposed")],
+  ].map(([label, matching]) => ({
+    label: label as string,
+    laptops: (matching as Asset[]).filter((a) => a.asset_type === "Laptop").length,
+    desktops: (matching as Asset[]).filter((a) => a.asset_type === "Desktop Computer").length,
+  }));
   const list = assets.filter(
     (a) =>
       (status === "all" || a.status === status) &&
@@ -574,7 +578,7 @@ export default function Home() {
           </div>
         )}
         {view === "dashboard" && <div className="ownership-stats">
-          {[["SPB laptops & desktops", spbAssets], ["Consultant laptops & desktops", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map(([statusLabel, total]) => <span key={statusLabel as string}>{statusLabel as string}<b>{total as number}</b></span>)}</div></div>)}
+          {[["SPB laptops & desktops", spbAssets], ["Consultant laptops & desktops", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map((item) => <span key={item.label}><strong>{item.label}</strong><small>Laptop <b>{item.laptops}</b></small><small>Desktop <b>{item.desktops}</b></small></span>)}</div></div>)}
         </div>}
         {view === "users" && <div className="panel"><div className="title"><div><h2>User accounts and roles</h2><p>Create sign-in access, link the employee, and assign the correct role.</p></div><button className="plain" onClick={loadAccounts}>Refresh</button></div><form className="asset-form" onSubmit={createStaffAccount}><label>Employee<select value={accountEmployeeId} onChange={(e) => setAccountEmployeeId(e.target.value)}><option value="">Link later / no employee record</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Email address<input required type="email" value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} /></label><label>Temporary password<input required minLength={8} type="password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} /></label><label>Role<select value={accountRole} onChange={(e) => setAccountRole(e.target.value as "admin" | "user")}><option value="user">User — view only</option><option value="admin">Admin — full management</option></select></label><div className="form-actions"><button type="submit">Create user account</button></div></form><div className="title user-account-list"><div><h2>Registered users</h2><p>Manage access, passwords and administrator roles.</p></div></div>{accounts.length ? <table><thead><tr><th>User</th><th>Office email</th><th>Role</th><th>Access</th></tr></thead><tbody>{accounts.map((account) => <tr key={account.id}><td><b>{account.employees?.name || "Not linked"}</b></td><td>{account.email}</td><td><select defaultValue={account.role} onChange={(e) => changeAccountRole(account.id, e.target.value as "admin" | "user")}><option value="user">User</option><option value="admin">Admin</option></select></td><td><button className="plain" onClick={() => accountAction(account.id, "password")}>Set new password</button><button className="plain" onClick={() => accountAction(account.id, "access", !account.is_active)}>{account.is_active ? "Remove access" : "Restore access"}</button></td></tr>)}</tbody></table> : <p className="state">Select Refresh to load user accounts.</p>}</div>}
         {view === "assets" && <div className="panel">
