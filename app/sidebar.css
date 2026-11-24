@@ -46,9 +46,10 @@
 .viewer-console > section .user-preview-launch { display: none !important; }
 
 /* People remain explorable for viewers, but their profile is strictly read-only. */
-.employee-view-link{padding:0;border:0;border-radius:0;color:#0f3b82;background:transparent;box-shadow:none;font-weight:800;text-align:left}
-.employee-view-link:hover{color:#881337;background:transparent;transform:none;text-decoration:underline}
-.viewer-console > section .employee-directory .employee-view-link{display:inline-flex!important}
+.employee-view-link,.consultant-view-link{padding:0;border:0;border-radius:0;color:#0f3b82;background:transparent;box-shadow:none;font-weight:800;text-align:left}
+.employee-view-link:hover,.consultant-view-link:hover{color:#881337;background:transparent;transform:none;text-decoration:underline}
+.viewer-console > section .employee-directory .employee-view-link,.viewer-console > section .consultant-view-link{display:inline-flex!important}
 .viewer-console .employee-detail-form input{pointer-events:none;background:#f8fafc}
-.viewer-console .employee-detail-form .employee-section:nth-of-type(3),
+.viewer-console .employee-detail-form .employee-section:nth-of-type(3) .employee-section-heading label,
+.viewer-console .employee-detail-form .employee-section:nth-of-type(3) .employee-resource-list button,
 .viewer-console .employee-detail-form .actions{display:none!important}
