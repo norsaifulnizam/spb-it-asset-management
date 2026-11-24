@@ -230,6 +230,17 @@ export default function Home() {
     replacementDate.setFullYear(replacementDate.getFullYear() - 4);
     return new Date(a.purchase_date + "T00:00:00") <= replacementDate;
   };
+  const replacementStatus = (a: Asset) => {
+    if (!a.purchase_date) return { label: "Not scheduled", detail: "Add a purchase date to calculate the 4-year replacement review.", due: false };
+    const replacementDate = new Date(a.purchase_date + "T00:00:00");
+    replacementDate.setFullYear(replacementDate.getFullYear() + 4);
+    const due = replacementDate <= new Date();
+    return {
+      label: due ? "Replacement review due" : "Replacement review planned",
+      detail: `Due ${replacementDate.toLocaleDateString("en-GB")}`,
+      due,
+    };
+  };
   const activeAssets = assets.filter((a) => a.status !== "disposed");
   const assignedAssets = activeAssets.filter((a) => a.status === "assigned");
   const availableAssets = activeAssets.filter((a) => a.status === "available");
@@ -894,7 +905,7 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-              <div className="facts">
+              <div className="facts asset-summary-facts">
                 <div>
                   Status
                   <Tag v={detail.status} />
@@ -906,6 +917,7 @@ export default function Home() {
                   Condition
                   <Tag v={detail.condition} />
                 </div>
+                {(() => { const replacement = replacementStatus(detail); return <div className={replacement.due ? "replacement-due" : "replacement-planned"}>Replacement<b>{replacement.label}</b><small>{replacement.detail}</small></div>; })()}
               </div>
               <h3>Remarks / notes</h3>
               <div className="remarks-detail">{detail.notes || "No remarks recorded for this asset."}</div>
