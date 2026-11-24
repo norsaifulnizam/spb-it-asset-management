@@ -143,19 +143,20 @@ export default function Home() {
     [f, setF] = useState(empty);
   async function load() {
     setBusy(true);
+    const canManage = profile?.role === "admin";
     const [a, p, l, s, sd, sa] = await Promise.all([
       db
         .from("assets")
         .select("*, employees(id,name,department)")
         .order("created_at", { ascending: false }),
       db.from("employees").select("id,name,department,office_location").order("name"),
-      db
+      canManage ? db
         .from("maintenance_logs")
         .select("*")
-        .order("logged_date", { ascending: false }),
-      db.from("software_licenses").select("*").order("product_name"),
-      db.from("server_details").select("*"),
-      db.from("software_license_assignments").select("*"),
+        .order("logged_date", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+      canManage ? db.from("software_licenses").select("*").order("product_name") : Promise.resolve({ data: [], error: null }),
+      canManage ? db.from("server_details").select("*") : Promise.resolve({ data: [], error: null }),
+      canManage ? db.from("software_license_assignments").select("*") : Promise.resolve({ data: [], error: null }),
     ]);
     if (a.error || p.error || l.error)
       setNotice(
@@ -546,7 +547,7 @@ export default function Home() {
             ["consultants", "♧", "Consultants"],
             ["maintenance", "⚒", "Maintenance"],
             ["users", "♙", "User accounts"],
-          ] as string[][]).filter(([item]) => !viewer || item !== "users").map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
+          ] as string[][]).filter(([item]) => !viewer || !["software", "maintenance", "users"].includes(item)).map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
         </nav>
         <small>
           SELANGOR PROPERTIES
