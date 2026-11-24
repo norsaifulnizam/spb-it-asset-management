@@ -34,8 +34,21 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    // Refresh session so it doesn't expire while user is active
-    await supabase.auth.getUser();
+    // Refresh session and keep the register behind the real staff login.
+    const { data: { user } } = await supabase.auth.getUser();
+    const isLogin = request.nextUrl.pathname === "/login";
+    if (!user && !isLogin) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = "";
+      return NextResponse.redirect(loginUrl);
+    }
+    if (user && isLogin) {
+      const appUrl = request.nextUrl.clone();
+      appUrl.pathname = "/";
+      appUrl.search = "";
+      return NextResponse.redirect(appUrl);
+    }
     return response;
   } catch {
     // Never let an auth hiccup crash the entire edge middleware

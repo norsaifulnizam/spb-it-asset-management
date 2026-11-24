@@ -1,8 +1,9 @@
 "use client";
 import "./sidebar.css";
 import "./assignment.css";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import StaffPortal from "./staff-portal";
 type Employee = { id: string; name: string; department: string | null; office_location: string | null };
 type Asset = {
   id: string;
@@ -88,6 +89,8 @@ const emptyServerInfo = { hostname: "", ip_address: "", operating_system: "", se
 export default function Home() {
   const db = useMemo(() => createClient(), []);
   const [assets, setAssets] = useState<Asset[]>([]),
+    [profile, setProfile] = useState<{ role: "admin" | "user"; employee_id: string | null } | null>(null),
+    [profileReady, setProfileReady] = useState(false),
     [people, setPeople] = useState<Employee[]>([]),
     [logs, setLogs] = useState<Log[]>([]),
     [software, setSoftware] = useState<SoftwareLicense[]>([]),
@@ -126,6 +129,9 @@ export default function Home() {
     [softwareEdit, setSoftwareEdit] = useState<SoftwareLicense | null | undefined>(undefined),
     [softwareForm, setSoftwareForm] = useState(emptySoftware),
     [softwareAssignmentLicense, setSoftwareAssignmentLicense] = useState<SoftwareLicense | null>(null),
+    [accountEmail, setAccountEmail] = useState(""),
+    [accountPassword, setAccountPassword] = useState(""),
+    [accountEmployeeId, setAccountEmployeeId] = useState(""),
     [softwareAssignmentPage, setSoftwareAssignmentPage] = useState(1),
     [serverInfoAsset, setServerInfoAsset] = useState<Asset | null>(null),
     [serverForm, setServerForm] = useState(emptyServerInfo),
@@ -167,8 +173,25 @@ export default function Home() {
     setBusy(false);
   }
   useEffect(() => {
-    load();
-  }, []);
+    async function loadProfile() {
+      const { data: { user } } = await db.auth.getUser();
+      if (!user) { window.location.assign("/login"); return; }
+      const { data, error } = await db.from("asset_app_users").select("role,employee_id").eq("id", user.id).single();
+      if (error || !data) { setNotice("Your account has not been configured yet. Please contact SPB IT."); setProfile({ role: "user", employee_id: null }); }
+      else setProfile(data as { role: "admin" | "user"; employee_id: string | null });
+      setProfileReady(true);
+    }
+    loadProfile();
+  }, [db]);
+  useEffect(() => { if (profile?.role === "admin") load(); }, [profile]);
+  async function createStaffAccount(e: FormEvent) {
+    e.preventDefault();
+    const { data } = await db.auth.getSession();
+    const response = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token || ""}` }, body: JSON.stringify({ email: accountEmail, password: accountPassword, employeeId: accountEmployeeId || null }) });
+    const result = await response.json();
+    if (!response.ok) return setNotice(result.error || "Could not create the user account.");
+    setAccountEmail(""); setAccountPassword(""); setAccountEmployeeId(""); setNotice("Staff account created. They can now sign in with their email and password.");
+  }
   const expired = (a: Asset) =>
     !!a.warranty_expiry &&
     new Date(a.warranty_expiry + "T00:00:00") < new Date();
@@ -461,6 +484,8 @@ export default function Home() {
       load();
     }
   }
+  if (!profileReady) return <main className="user-portal"><p className="state">Checking your access…</p></main>;
+  if (profile?.role !== "admin") return <StaffPortal employeeId={profile?.employee_id || null} />;
   if (accessView === "user") {
     const previewEmployee = people.find((person) => person.id === previewEmployeeId);
     const myAssets = assets.filter((asset) => asset.assigned_employee_id === previewEmployeeId);
@@ -498,6 +523,7 @@ export default function Home() {
             ["employees", "♙", "Employees"],
             ["consultants", "♧", "Consultants"],
             ["maintenance", "⚒", "Maintenance"],
+            ["users", "♙", "User accounts"],
           ].map(([item, icon, label]) => <button key={item} className={view === item ? "on" : ""} onClick={() => setView(item)}><i>{icon}</i>{label}</button>)}
         </nav>
         <small>
@@ -509,7 +535,7 @@ export default function Home() {
       <section>
         <button className="user-preview-launch plain" onClick={() => { setPreviewEmployeeId(people[0]?.id || ""); setAccessView("user"); }}>View as user</button>
         <header>
-          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
+          <div><em>SPB IT OPERATIONS · {view.toUpperCase()}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "Dashboard overview" : view === "employees" ? "Employees" : view === "users" ? "User accounts" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "users" ? "Create sign-in access and link staff to their employee record." : view === "dashboard" ? "A live view of SPB IT infrastructure and its follow-ups." : "Asset repairs and service history."}</p></div>
           {view === "assets" && <button onClick={() => newAsset()}>+ Register hardware</button>}
           {view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
           {view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
@@ -523,6 +549,7 @@ export default function Home() {
         {view === "dashboard" && <div className="ownership-stats">
           {[["SPB assets", spbAssets], ["Consultant assets", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map(([statusLabel, total]) => <span key={statusLabel as string}>{statusLabel as string}<b>{total as number}</b></span>)}</div></div>)}
         </div>}
+        {view === "users" && <div className="panel"><div className="title"><div><h2>Create staff sign-in</h2><p>Give a staff member read-only access to their own assigned hardware and software.</p></div></div><form className="asset-form" onSubmit={createStaffAccount}><label>Employee<select value={accountEmployeeId} onChange={(e) => setAccountEmployeeId(e.target.value)}><option value="">Link later / no employee record</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Email address<input required type="email" value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} /></label><label>Temporary password<input required minLength={8} type="password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} /></label><div className="form-actions"><button type="submit">Create user account</button></div></form></div>}
         {view === "assets" && <div className="panel">
           <div className="title">
             <div>
