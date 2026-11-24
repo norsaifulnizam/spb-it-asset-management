@@ -132,6 +132,8 @@ export default function Home() {
     [accountEmail, setAccountEmail] = useState(""),
     [accountPassword, setAccountPassword] = useState(""),
     [accountEmployeeId, setAccountEmployeeId] = useState(""),
+    [accountRole, setAccountRole] = useState<"admin" | "user">("user"),
+    [accounts, setAccounts] = useState<{ id: string; email: string; role: "admin" | "user"; is_active: boolean; employees: { name: string } | null }[]>([]),
     [softwareAssignmentPage, setSoftwareAssignmentPage] = useState(1),
     [serverInfoAsset, setServerInfoAsset] = useState<Asset | null>(null),
     [serverForm, setServerForm] = useState(emptyServerInfo),
@@ -187,10 +189,23 @@ export default function Home() {
   async function createStaffAccount(e: FormEvent) {
     e.preventDefault();
     const { data } = await db.auth.getSession();
-    const response = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token || ""}` }, body: JSON.stringify({ email: accountEmail, password: accountPassword, employeeId: accountEmployeeId || null }) });
+    const response = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token || ""}` }, body: JSON.stringify({ email: accountEmail, password: accountPassword, employeeId: accountEmployeeId || null, role: accountRole }) });
     const result = await response.json();
     if (!response.ok) return setNotice(result.error || "Could not create the user account.");
-    setAccountEmail(""); setAccountPassword(""); setAccountEmployeeId(""); setNotice("Staff account created. They can now sign in with their email and password.");
+    setAccountEmail(""); setAccountPassword(""); setAccountEmployeeId(""); setAccountRole("user"); setNotice("User account created. They can now sign in with their email and password."); loadAccounts();
+  }
+  async function loadAccounts() {
+    const { data } = await db.auth.getSession();
+    const response = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${data.session?.access_token || ""}` } });
+    const result = await response.json();
+    if (response.ok) setAccounts(result.users || []); else setNotice(result.error || "Could not load user accounts.");
+  }
+  async function changeAccountRole(id: string, role: "admin" | "user") {
+    const { data } = await db.auth.getSession();
+    const response = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token || ""}` }, body: JSON.stringify({ id, role }) });
+    const result = await response.json();
+    if (!response.ok) return setNotice(result.error || "Could not update role.");
+    setNotice("User role updated."); loadAccounts();
   }
   const expired = (a: Asset) =>
     !!a.warranty_expiry &&
@@ -549,7 +564,7 @@ export default function Home() {
         {view === "dashboard" && <div className="ownership-stats">
           {[["SPB assets", spbAssets], ["Consultant assets", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map(([statusLabel, total]) => <span key={statusLabel as string}>{statusLabel as string}<b>{total as number}</b></span>)}</div></div>)}
         </div>}
-        {view === "users" && <div className="panel"><div className="title"><div><h2>Create staff sign-in</h2><p>Give a staff member read-only access to their own assigned hardware and software.</p></div></div><form className="asset-form" onSubmit={createStaffAccount}><label>Employee<select value={accountEmployeeId} onChange={(e) => setAccountEmployeeId(e.target.value)}><option value="">Link later / no employee record</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Email address<input required type="email" value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} /></label><label>Temporary password<input required minLength={8} type="password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} /></label><div className="form-actions"><button type="submit">Create user account</button></div></form></div>}
+        {view === "users" && <div className="panel"><div className="title"><div><h2>User accounts and roles</h2><p>Create sign-in access, link the employee, and assign the correct role.</p></div><button className="plain" onClick={loadAccounts}>Refresh</button></div><form className="asset-form" onSubmit={createStaffAccount}><label>Employee<select value={accountEmployeeId} onChange={(e) => setAccountEmployeeId(e.target.value)}><option value="">Link later / no employee record</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Email address<input required type="email" value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} /></label><label>Temporary password<input required minLength={8} type="password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} /></label><label>Role<select value={accountRole} onChange={(e) => setAccountRole(e.target.value as "admin" | "user")}><option value="user">User — view only</option><option value="admin">Admin — full management</option></select></label><div className="form-actions"><button type="submit">Create user account</button></div></form><div className="title user-account-list"><div><h2>Existing users</h2><p>Change a role when a staff member needs Admin access.</p></div></div>{accounts.length ? <table><thead><tr><th>Email</th><th>Employee</th><th>Role</th></tr></thead><tbody>{accounts.map((account) => <tr key={account.id}><td><b>{account.email}</b></td><td>{account.employees?.name || "Not linked"}</td><td><select value={account.role} onChange={(e) => changeAccountRole(account.id, e.target.value as "admin" | "user")}><option value="user">User — view only</option><option value="admin">Admin — full management</option></select></td></tr>)}</tbody></table> : <p className="state">Select Refresh to load user accounts.</p>}</div>}
         {view === "assets" && <div className="panel">
           <div className="title">
             <div>
