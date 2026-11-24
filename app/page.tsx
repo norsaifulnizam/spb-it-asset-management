@@ -28,6 +28,8 @@ type Asset = {
   assignment_kind: string;
   consultant_name: string | null;
   consultant_company: string | null;
+  disposal_category: string | null;
+  disposal_recipient: string | null;
   status: string;
   notes: string | null;
   employees: Employee | null;
@@ -82,11 +84,21 @@ const empty = {
   assignment_kind: "internal",
   consultant_name: "",
   consultant_company: "",
+  disposal_category: "",
+  disposal_recipient: "",
   status: "available",
   notes: "",
 };
 const emptySoftware = { company: "SPB", product_name: "", vendor: "", license_type: "subscription", total_seats: "1", assigned_seats: "0", renewal_date: "", annual_cost: "", notes: "" };
 const emptyServerInfo = { hostname: "", ip_address: "", operating_system: "", server_role: "", environment: "production", rack_location: "" };
+const disposalOptions = [
+  ["former_staff_mss", "Former staff / MSS"],
+  ["current_staff", "Current staff"],
+  ["sold", "Sold"],
+  ["recycled_destroyed", "Recycled / destroyed"],
+  ["other", "Other"],
+] as const;
+const disposalLabel = (value: string | null) => disposalOptions.find(([key]) => key === value)?.[1] || "Not recorded";
 export default function Home() {
   const db = useMemo(() => createClient(), []);
   const [assets, setAssets] = useState<Asset[]>([]),
@@ -104,6 +116,7 @@ export default function Home() {
     [status, setStatus] = useState("all"),
     [type, setType] = useState("all"),
     [assetScope, setAssetScope] = useState<"spb" | "consultant" | "disposed">("spb"),
+    [disposalCategory, setDisposalCategory] = useState("all"),
     [location, setLocation] = useState("all"),
     [year, setYear] = useState("all"),
     [view, setView] = useState("dashboard"),
@@ -114,6 +127,7 @@ export default function Home() {
     [consultantOpen, setConsultantOpen] = useState(false),
     [laptopAssignmentsOpen, setLaptopAssignmentsOpen] = useState(false),
     [desktopAssignmentsOpen, setDesktopAssignmentsOpen] = useState(false),
+    [disposedOpen, setDisposedOpen] = useState(false),
     [pageSize, setPageSize] = useState(5),
     [assetPage, setAssetPage] = useState(1),
     [attentionPage, setAttentionPage] = useState(1),
@@ -265,6 +279,7 @@ export default function Home() {
   const list = assets.filter(
     (a) =>
       (status === "all" || a.status === status) &&
+      (assetScope !== "disposed" || disposalCategory === "all" || a.disposal_category === disposalCategory) &&
       (assetScope === "disposed" || (a.status !== "disposed" && (assetScope === "consultant" ? a.assignment_kind === "consultant" : a.assignment_kind !== "consultant"))) &&
       (type === "all" || (type === "mobile" ? ["Tablet", "Phone"].includes(a.asset_type) : a.asset_type === type)) &&
       (location === "all" || a.location === location) &&
@@ -326,7 +341,7 @@ export default function Home() {
     setServerPage(1);
   }
   const assignedName = (asset: Asset) => asset.assignment_kind === "consultant" ? asset.consultant_name || "Unassigned" : asset.employees?.name || "Unassigned";
-  const exportAssets = () => exportCsv(`hardware-assets-${assetScope}-${type === "all" ? "all" : type.toLowerCase().replaceAll(" ", "-")}`, ["Asset tag", "Type", "Company", "Brand / model", "PC / device name", "Serial number", "Assigned to", "Assignment type", "Consultant company", "Location", "Purchase date", "Warranty expiry", "Condition", "Status", "Previous user", "Remarks / notes"], list.map((asset) => [asset.asset_tag, asset.asset_type, asset.company, asset.brand_model, asset.device_name, asset.serial_number, assignedName(asset), asset.assignment_kind === "consultant" ? "Consultant / external" : "SPB staff", asset.consultant_company, asset.location, asset.purchase_date, asset.warranty_expiry, asset.condition, asset.status.replaceAll("_", " "), asset.previous_user, asset.notes]));
+  const exportAssets = () => exportCsv(`hardware-assets-${assetScope}-${type === "all" ? "all" : type.toLowerCase().replaceAll(" ", "-")}`, ["Asset tag", "Type", "Company", "Brand / model", "PC / device name", "Serial number", "Assigned to", "Assignment type", "Consultant company", "Location", "Purchase date", "Warranty expiry", "Condition", "Status", "Disposal category", "Disposed to / recipient", "Previous user", "Remarks / notes"], list.map((asset) => [asset.asset_tag, asset.asset_type, asset.company, asset.brand_model, asset.device_name, asset.serial_number, assignedName(asset), asset.assignment_kind === "consultant" ? "Consultant / external" : "SPB staff", asset.consultant_company, asset.location, asset.purchase_date, asset.warranty_expiry, asset.condition, asset.status.replaceAll("_", " "), disposalLabel(asset.disposal_category), asset.disposal_recipient, asset.previous_user, asset.notes]));
   const exportEmployees = () => exportCsv("employee-directory", ["Name", "Department", "Office location", "Assigned assets"], employeeList.map((person) => [person.name, person.department, person.office_location, assets.filter((asset) => asset.assigned_employee_id === person.id).length]));
   const exportConsultants = () => exportCsv("consultant-assignments", ["Consultant", "Consultant company", "Asset tag", "Type", "Brand / model", "Serial number", "Location", "Status"], consultantAssets.map((asset) => [asset.consultant_name, asset.consultant_company, asset.asset_tag, asset.asset_type, asset.brand_model, asset.serial_number, asset.location, asset.status.replaceAll("_", " ")]));
   const exportSoftware = () => exportCsv("software-licences", ["Company", "Software", "Vendor", "Licence type", "Total seats", "Assigned seats", "Available seats", "Named users", "Renewal date", "Annual cost (RM)", "Notes"], softwareList.map((licence) => { const named = assignmentsFor(licence.id).map((assignment) => people.find((person) => person.id === assignment.employee_id)?.name).filter(Boolean).join("; "); return [licence.company, licence.product_name, licence.vendor, licence.license_type, licence.total_seats, licence.assigned_seats, licence.total_seats - licence.assigned_seats, named, licence.renewal_date, licence.annual_cost, licence.notes]; }));
@@ -437,6 +452,8 @@ export default function Home() {
       assignment_kind: a.assignment_kind || "internal",
       consultant_name: a.consultant_name || "",
       consultant_company: a.consultant_company || "",
+      disposal_category: a.disposal_category || "",
+      disposal_recipient: a.disposal_recipient || "",
       status: a.status,
       notes: a.notes || "",
     });
@@ -446,7 +463,8 @@ export default function Home() {
     if (!f.asset_tag || !f.brand_model)
       return setNotice("Asset tag and brand/model are required.");
     let assignedEmployeeId: string | null = null;
-    const assignedName = f.assignment_kind === "internal" ? f.assigned_user.trim() : "";
+    const isDisposed = f.status === "disposed";
+    const assignedName = !isDisposed && f.assignment_kind === "internal" ? f.assigned_user.trim() : "";
     if (assignedName) {
       const existing = people.find((p) => p.name.trim().toLowerCase() === assignedName.toLowerCase());
       if (existing) assignedEmployeeId = existing.id;
@@ -480,7 +498,9 @@ export default function Home() {
       assignment_kind: f.assignment_kind,
       consultant_name: f.assignment_kind === "consultant" ? f.consultant_name || null : null,
       consultant_company: f.assignment_kind === "consultant" ? f.consultant_company || null : null,
-      assigned_employee_id: assignedEmployeeId,
+      disposal_category: isDisposed ? f.disposal_category || null : null,
+      disposal_recipient: isDisposed ? f.disposal_recipient.trim() || null : null,
+      assigned_employee_id: isDisposed ? null : assignedEmployeeId,
       status: assetStatus,
       notes: f.notes || null,
     };
@@ -566,7 +586,7 @@ export default function Home() {
                   <button className={view === "assets" && assetScope === "spb" && type === assetType && status === "not_applicable" ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope("spb"); setType(assetType); setStatus("not_applicable"); setAssetPage(1); }}><i>·</i>N/A<b className="asset-count">{assets.filter(a => a.status === "not_applicable" && a.assignment_kind !== "consultant" && a.asset_type === assetType).length}</b></button>
                 </div>}
               </div>)}
-              {scope === "spb" && <button className={view === "assets" && assetScope === "disposed" ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope("disposed"); setType("all"); setStatus("disposed"); setAssetPage(1); }}><i>·</i>Disposed<b className="asset-count">{assets.filter(a => a.status === "disposed").length}</b></button>}
+              {scope === "spb" && <><button className={view === "assets" && assetScope === "disposed" ? "selected folder-toggle" : "folder-toggle"} aria-expanded={disposedOpen} onClick={() => setDisposedOpen(!disposedOpen)}><i>·</i>Disposed<b className="asset-count">{assets.filter(a => a.status === "disposed").length}</b><b className="nav-caret">{disposedOpen ? "−" : "+"}</b></button>{disposedOpen && <div className="assignment-subnav"><button className={view === "assets" && assetScope === "disposed" && disposalCategory === "all" ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope("disposed"); setType("all"); setStatus("disposed"); setDisposalCategory("all"); setAssetPage(1); }}><i>·</i>All disposed<b className="asset-count">{assets.filter(a => a.status === "disposed").length}</b></button>{disposalOptions.map(([category, label]) => <button key={category} className={view === "assets" && assetScope === "disposed" && disposalCategory === category ? "selected" : ""} onClick={() => { setView("assets"); setAssetScope("disposed"); setType("all"); setStatus("disposed"); setDisposalCategory(category); setAssetPage(1); }}><i>·</i>{label}<b className="asset-count">{assets.filter(a => a.status === "disposed" && a.disposal_category === category).length}</b></button>)}</div>}</>}
               </>}
             </div>)}
           </div>}
@@ -668,7 +688,12 @@ export default function Home() {
                       {expired(a) && <mark>Warranty expired</mark>}
                     </td>
                     <td>
-                      {a.assignment_kind === "consultant" && a.consultant_name ? (
+                      {a.status === "disposed" && a.disposal_recipient ? (
+                        <>
+                          <b>{a.disposal_recipient}</b>
+                          <small>{disposalLabel(a.disposal_category)}</small>
+                        </>
+                      ) : a.assignment_kind === "consultant" && a.consultant_name ? (
                         <>
                           <b>{a.consultant_name}</b>
                           <small>{a.consultant_company || "Consultant"}</small>
@@ -818,17 +843,17 @@ export default function Home() {
                   v={f.location}
                   set={(v) => setF({ ...f, location: v })}
                 />
-                <label>
+                {f.status !== "disposed" && <label>
                   Assignment type
                   <select value={f.assignment_kind} onChange={(e) => setF({ ...f, assignment_kind: e.target.value })}><option value="internal">Internal staff</option><option value="consultant">Consultant / external</option></select>
-                </label>
-                {f.assignment_kind === "internal" ? <label>
+                </label>}
+                {f.status !== "disposed" && (f.assignment_kind === "internal" ? <label>
                   Assigned user
                   <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value })} placeholder="Search or type a new name" />
                   <datalist id="employee-names">{people.map((p) => <option key={p.id} value={p.name}>{p.department || "Employee"}</option>)}</datalist>
                   <small>New names are added to Employees when you save.</small>
-                </label> : <Input l="Consultant name" v={f.consultant_name} set={(v) => setF({ ...f, consultant_name: v })} />}
-                {f.assignment_kind === "consultant" && <Input l="Consultant company" v={f.consultant_company} set={(v) => setF({ ...f, consultant_company: v })} />}
+                </label> : <Input l="Consultant name" v={f.consultant_name} set={(v) => setF({ ...f, consultant_name: v })} />)}
+                {f.status !== "disposed" && f.assignment_kind === "consultant" && <Input l="Consultant company" v={f.consultant_company} set={(v) => setF({ ...f, consultant_company: v })} />}
                 <label>
                   Status
                   <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
@@ -839,6 +864,10 @@ export default function Home() {
                     <option value="not_applicable">N/A</option>
                   </select>
                 </label>
+                {f.status === "disposed" && <><label>
+                  Disposal category
+                  <select value={f.disposal_category} onChange={(e) => setF({ ...f, disposal_category: e.target.value })}><option value="">Select category…</option>{disposalOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+                </label><Input l="Disposed to / recipient" v={f.disposal_recipient} set={(v) => setF({ ...f, disposal_recipient: v })} /></>}
                 <label className="wide">
                   Remarks / notes
                   <textarea
@@ -905,6 +934,7 @@ export default function Home() {
               </div>
               <h3>Remarks / notes</h3>
               <div className="remarks-detail">{detail.notes || "No remarks recorded for this asset."}</div>
+              {detail.status === "disposed" && <><h3>Disposal details</h3><div className="facts"><div>Category<b>{disposalLabel(detail.disposal_category)}</b></div><div>Disposed to / recipient<b>{detail.disposal_recipient || "Not recorded"}</b></div></div></>}
               <h3>Device details</h3>
               <div className="facts">
                 <div>Company<b>{detail.company || "—"}</b></div>
