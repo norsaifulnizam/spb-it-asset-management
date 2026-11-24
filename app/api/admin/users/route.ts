@@ -52,7 +52,20 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json();
   const id = String(body.id || "");
   const role = body.role === "admin" ? "admin" : "user";
+  const action = String(body.action || "role");
   if (!id) return NextResponse.json({ error: "User is required." }, { status: 400 });
+  if (action === "password") {
+    const password = String(body.password || "");
+    if (password.length < 8) return NextResponse.json({ error: "Use a password of at least 8 characters." }, { status: 400 });
+    const { error } = await access.admin.auth.admin.updateUserById(id, { password });
+    return error ? NextResponse.json({ error: error.message }, { status: 400 }) : NextResponse.json({ ok: true });
+  }
+  if (action === "access") {
+    const isActive = Boolean(body.isActive);
+    if (id === access.callerId && !isActive) return NextResponse.json({ error: "You cannot remove your own access." }, { status: 400 });
+    const { error } = await access.admin.from("asset_app_users").update({ is_active: isActive }).eq("id", id);
+    return error ? NextResponse.json({ error: error.message }, { status: 400 }) : NextResponse.json({ ok: true });
+  }
   if (id === access.callerId && role !== "admin") return NextResponse.json({ error: "You cannot remove your own Admin role." }, { status: 400 });
   const { error } = await access.admin.from("asset_app_users").update({ role }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
