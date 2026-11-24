@@ -37,6 +37,7 @@
 .attention-tabs button { padding: 7px 10px; color: #475569; background: #f1f5f9; box-shadow: none; font-size: 12px; }
 .attention-tabs button:hover, .attention-tabs button.on { color: #fff; background: #881337; }
 .attention-tabs button b { margin-left: 6px; color: inherit; }
+.attention-assignee{display:grid;margin-left:auto;text-align:right;white-space:nowrap}.attention-assignee small{font-size:11px}.attention-assignee b{color:#334155;font-size:12px}.attention-assignee b:not(:empty){max-width:170px;overflow:hidden;text-overflow:ellipsis}
 .hardware-group { display: grid; gap: 2px; margin: 3px 0 7px; }
 .app > aside .hardware-subnav .hardware-group-title { color: #fff; background: #152644; font-size: 13px; font-weight: 800; }
 .app > aside .hardware-subnav .hardware-group-title span { padding-left: 4px; }

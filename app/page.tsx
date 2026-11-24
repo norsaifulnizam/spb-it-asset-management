@@ -718,6 +718,7 @@ export default function Home() {
                     </b>
                     <small>{attentionReason(a)}</small>
                   </span>
+                  <span className="attention-assignee"><small>{a.assignment_kind === "consultant" ? "Consultant" : "Assigned to"}</small><b>{a.assignment_kind === "consultant" ? a.consultant_name || "Unassigned" : a.employees?.name || "Unassigned"}</b></span>
                 </a>
               ))}{selectedAttention.length > 10 && <div className="pager"><small>Showing {(attentionPage - 1) * 10 + 1}–{Math.min(attentionPage * 10, selectedAttention.length)} of {selectedAttention.length}</small><div><button className="plain" disabled={attentionPage === 1} onClick={() => setAttentionPage(attentionPage - 1)}>Previous</button><span>{attentionPage} / {attentionPages}</span><button className="plain" disabled={attentionPage === attentionPages} onClick={() => setAttentionPage(attentionPage + 1)}>Next</button></div></div>}</>
             ) : (
