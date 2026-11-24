@@ -92,7 +92,8 @@ const empty = {
 const emptySoftware = { company: "SPB", product_name: "", vendor: "", license_type: "subscription", total_seats: "1", assigned_seats: "0", renewal_date: "", annual_cost: "", notes: "" };
 const emptyServerInfo = { hostname: "", ip_address: "", operating_system: "", server_role: "", environment: "production", rack_location: "" };
 const disposalOptions = [
-  ["former_staff_mss", "Former staff / MSS"],
+  ["former_staff", "Former staff"],
+  ["mss", "MSS"],
   ["current_staff", "Current staff"],
   ["sold", "Sold"],
   ["recycled_destroyed", "Recycled / destroyed"],
