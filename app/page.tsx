@@ -246,10 +246,6 @@ export default function Home() {
       due,
     };
   };
-  const activeAssets = assets.filter((a) => a.status !== "disposed");
-  const assignedAssets = activeAssets.filter((a) => a.status === "assigned");
-  const availableAssets = activeAssets.filter((a) => a.status === "available");
-  const repairAssets = activeAssets.filter((a) => a.status === "under_repair");
   // The dashboard is an end-user equipment overview: laptops and desktops only.
   // Peripheral, server and mobile totals remain available in Hardware Assets.
   const dashboardDevices = assets.filter((a) => ["Laptop", "Desktop Computer"].includes(a.asset_type));
@@ -706,8 +702,7 @@ export default function Home() {
           {!busy && list.length > 0 && <Pager total={list.length} page={assetPage} setPage={setAssetPage} pageSize={pageSize} setPageSize={changePageSize} />}
         </div>}
         {view === "servers" && <div className="panel"><div className="title"><div><h2>Server register</h2><p>Hostname, IP, operating system, role, environment and rack location.</p></div>{!viewer && <div className="title-actions"><button className="plain" onClick={exportServers}>Export Excel</button><button className="plain" onClick={load}>Refresh</button></div>}</div>{busy ? <p className="state">Loading servers…</p> : assets.filter((a) => a.asset_type === "Server").length ? <><table><thead><tr><th>Server</th><th>Hostname / IP address</th><th>System / role</th><th>Environment</th><th>Rack / location</th><th /></tr></thead><tbody>{pageItems(assets.filter((a) => a.asset_type === "Server"), serverPage).map((a) => { const info = serverDetails.find((x) => x.asset_id === a.id); return <tr key={a.id}><td><b>{a.asset_tag}</b><small>{a.brand_model} · {a.serial_number || "No serial"}</small></td><td><b>{info?.hostname || "Not set"}</b><small>{info?.ip_address || "IP not set"}</small></td><td><b>{info?.operating_system || "Not set"}</b><small>{info?.server_role || "Role not set"}</small></td><td>{info?.environment || "Not set"}</td><td><b>{info?.rack_location || "Not set"}</b><small>{a.location || "Asset location not set"}</small></td><td><button className="plain" onClick={() => openServerInfo(a)}>Server info</button></td></tr>; })}</tbody></table><Pager total={assets.filter((a) => a.asset_type === "Server").length} page={serverPage} setPage={setServerPage} pageSize={pageSize} setPageSize={changePageSize} /></> : <p className="state">No server assets yet. Register a server here, or edit an existing hardware asset and set its type to Server.</p>}</div>}
-        {view === "dashboard" && <div className="cols">
-          <div className="panel employee-preview">
+        {view === "dashboard" && <div className="panel employee-preview attention-full">
             <div className="title">
               <div>
                 <h2>Needs attention</h2>
@@ -732,26 +727,7 @@ export default function Home() {
             ) : (
               <p className="state">No assets in this attention category.</p>
             )}
-          </div>
-          <div className="panel dashboard-summary">
-            <div className="title">
-              <div>
-                <h2>Asset status</h2>
-                <p>Current distribution across the register.</p>
-              </div>
-            </div>
-            <div className="status-summary">
-              <strong>{activeAssets.length ? Math.round((assignedAssets.length / activeAssets.length) * 100) : 0}%</strong>
-              <span>of active assets are assigned</span>
-              <div><b style={{width: `${activeAssets.length ? (assignedAssets.length / activeAssets.length) * 100 : 0}%`}} /></div>
-              <small>{availableAssets.length} available · {repairAssets.length} under repair</small>
-            </div>
-            <div className="dashboard-breakdown">
-              <h3>Hardware by type</h3>
-              {[["Laptop", "Laptop"], ["Desktop Computer", "Desktop"], ["Monitor", "Monitor"], ["Server", "Server"], ["Printer", "Printer"], ["Phone", "Tablet / Phone"]].map(([assetType, label]) => <div key={assetType}><span>{label}</span><b>{activeAssets.filter(a => assetType === "Phone" ? ["Phone", "Tablet"].includes(a.asset_type) : a.asset_type === assetType).length}</b></div>)}
-            </div>
-          </div>
-        </div>}
+          </div>}
         {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Employee directory</h2><p>Search employee information and assigned assets. Select a name to view linked hardware.</p></div>{!viewer && <button className="plain" onClick={exportEmployees}>Export Excel</button>}</div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><button type="button" className="employee-view-link" onClick={() => openEmployee(p)}>{p.name}</button></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td></tr>; })}</tbody></table> : <p className="state">No employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "consultants" && <div className="panel"><div className="title"><div><h2>Consultant assignments</h2><p>External people and companies holding SPB assets. Select a consultant to view linked hardware and software.</p></div>{!viewer && <button className="plain" onClick={exportConsultants}>Export Excel</button>}</div>{consultantAssets.length ? <table><thead><tr><th>Consultant</th><th>Company</th><th>Asset</th><th>Location</th></tr></thead><tbody>{pageItems(consultantAssets, consultantPage).map((a) => <tr key={a.id}><td><button type="button" className="consultant-view-link" onClick={() => setDetail(a)}>{a.consultant_name}</button></td><td>{a.consultant_company || "Not set"}</td><td><b>{a.asset_tag}</b><small>{a.brand_model}</small></td><td>{a.location || "—"}</td></tr>)}</tbody></table> : <p className="state">No consultant assets yet.</p>}{consultantAssets.length > 0 && <Pager total={consultantAssets.length} page={consultantPage} setPage={setConsultantPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "software" && <div className="panel software-register"><div className="title"><div><h2>Software licence register</h2><p>Keep each company’s licences, seats, costs and renewal dates together.</p></div>{!viewer && <div className="title-actions"><button className="plain" onClick={exportSoftware}>Export Excel</button><button className="plain" onClick={load}>Refresh</button></div>}</div><div className="filters"><input placeholder="Search company, product, vendor or licence type" value={softwareQuery} onChange={(e) => { setSoftwareQuery(e.target.value); setSoftwarePage(1); }} /><select value={softwareCompany} onChange={(e) => { setSoftwareCompany(e.target.value); setSoftwarePage(1); }}><option value="all">All companies</option>{[...new Set(software.map(s => s.company).filter(Boolean))].sort().map(company => <option key={company}>{company}</option>)}</select></div>{softwareList.length ? <table><thead><tr><th>Company</th><th>Software</th><th>Licence type</th><th>Seats</th><th>Assigned staff</th><th>Renewal</th><th>Annual cost</th><th /></tr></thead><tbody>{pageItems(softwareList, softwarePage).map((s) => { const assignedPeople = assignmentsFor(s.id); return <tr key={s.id}><td><b>{s.company || "SPB"}</b></td><td><b>{s.product_name}</b><small>{s.vendor || "Vendor not set"}</small></td><td><Tag v={s.license_type} /></td><td><b>{s.assigned_seats} / {s.total_seats}</b><small>{s.total_seats - s.assigned_seats} available</small></td><td><b>{assignedPeople.length} named</b><small>{assignedPeople.length ? assignedPeople.map((a) => people.find((p) => p.id === a.employee_id)?.name).filter(Boolean).join(", ") : "No staff assigned"}</small></td><td>{s.renewal_date || "Not set"}</td><td>{s.annual_cost == null ? "—" : `RM ${s.annual_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td><td><button className="plain" onClick={() => { setSoftwareAssignmentPage(1); setSoftwareAssignmentLicense(s); }}>Manage users</button><button className="plain" onClick={() => editSoftware(s)}>Edit</button></td></tr>; })}</tbody></table> : <p className="state">No software licences match your search.</p>}{softwareList.length > 0 && <Pager total={softwareList.length} page={softwarePage} setPage={setSoftwarePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
