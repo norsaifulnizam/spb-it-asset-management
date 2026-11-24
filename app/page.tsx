@@ -485,7 +485,7 @@ export default function Home() {
     }
   }
   if (!profileReady) return <main className="user-portal"><p className="state">Checking your access…</p></main>;
-  if (profile?.role !== "admin") return <StaffPortal employeeId={profile?.employee_id || null} />;
+  if (profile?.role !== "admin") return <StaffPortal />;
   if (accessView === "user") {
     const previewEmployee = people.find((person) => person.id === previewEmployeeId);
     const myAssets = assets.filter((asset) => asset.assigned_employee_id === previewEmployeeId);

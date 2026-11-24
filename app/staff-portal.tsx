@@ -1,40 +1,9 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-type Employee = { id: string; name: string; department: string | null; office_location: string | null };
-type Asset = { id: string; asset_tag: string; asset_type: string; brand_model: string; serial_number: string | null; status: string; location: string | null };
-type Licence = { id: string; product_name: string; company: string; license_type: string };
-
-export default function StaffPortal({ employeeId }: { employeeId: string | null }) {
-  const db = useMemo(() => createClient(), []);
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [licences, setLicences] = useState<Licence[]>([]);
-  const [message, setMessage] = useState("Loading your IT records…");
-
-  useEffect(() => {
-    if (!employeeId) { setMessage("Your account is not linked to an employee record yet. Please contact SPB IT."); return; }
-    async function load() {
-      const [person, hardware, assignments] = await Promise.all([
-        db.from("employees").select("id,name,department,office_location").eq("id", employeeId).single(),
-        db.from("assets").select("id,asset_tag,asset_type,brand_model,serial_number,status,location").order("asset_tag"),
-        db.from("software_license_assignments").select("software_license_id"),
-      ]);
-      if (person.error || hardware.error || assignments.error) { setMessage("We could not load your IT records. Please contact SPB IT."); return; }
-      setEmployee(person.data);
-      setAssets(hardware.data || []);
-      const ids = (assignments.data || []).map((item) => item.software_license_id);
-      if (ids.length) {
-        const { data } = await db.from("software_licenses").select("id,product_name,company,license_type").in("id", ids).order("product_name");
-        setLicences(data || []);
-      }
-      setMessage("");
-    }
-    load();
-  }, [db, employeeId]);
-
-  async function signOut() { await db.auth.signOut(); window.location.assign("/login"); }
-  return <main className="user-portal"><header><div><em>SPB IT ASSET MANAGEMENT · MY PORTAL</em><h1>My IT assets</h1><p>View-only access to the hardware and software assigned to you.</p></div><button className="plain" onClick={signOut}>Sign out</button></header>{message ? <p className="state">{message}</p> : <><div className="user-welcome"><b>{employee?.name}</b><span>{employee?.department || "Department not set"} · {employee?.office_location || "Office location not set"}</span></div><div className="user-grid"><section className="panel"><div className="title"><div><h2>My hardware</h2><p>{assets.length} item(s) assigned to you.</p></div></div><div className="user-resource-list">{assets.map((asset) => <div key={asset.id}><span><b>{asset.asset_tag}</b><small>{asset.brand_model} · {asset.asset_type}{asset.serial_number ? ` · SN: ${asset.serial_number}` : ""}</small></span><small>{asset.status.replaceAll("_", " ")}</small></div>)}{!assets.length && <p className="state">No hardware assigned.</p>}</div></section><section className="panel"><div className="title"><div><h2>My software licences</h2><p>{licences.length} licence(s) assigned to you.</p></div></div><div className="user-resource-list">{licences.map((licence) => <div key={licence.id}><span><b>{licence.product_name}</b><small>{licence.company || "SPB"} · {licence.license_type}</small></span></div>)}{!licences.length && <p className="state">No software licences assigned.</p>}</div></section></div></>}</main>;
-}
+import "./staff-portal.css";
+type Employee={id:string;name:string;department:string|null;office_location:string|null};
+type Asset={id:string;asset_tag:string;asset_type:string;brand_model:string;serial_number:string|null;status:string;location:string|null;assignment_kind:string;consultant_name:string|null;consultant_company:string|null};
+type View="dashboard"|"assets"|"employees"|"consultants";
+export default function StaffPortal(){const db=useMemo(()=>createClient(),[]);const [view,setView]=useState<View>("dashboard"),[assets,setAssets]=useState<Asset[]>([]),[employees,setEmployees]=useState<Employee[]>([]),[query,setQuery]=useState(""),[message,setMessage]=useState("Loading the asset register…");useEffect(()=>{async function load(){const [hardware,people]=await Promise.all([db.from("assets").select("id,asset_tag,asset_type,brand_model,serial_number,status,location,assignment_kind,consultant_name,consultant_company").order("asset_tag"),db.from("employees").select("id,name,department,office_location").order("name")]);if(hardware.error||people.error){setMessage("We could not load the register. Please contact SPB IT.");return}setAssets(hardware.data||[]);setEmployees(people.data||[]);setMessage("")}load()},[db]);async function signOut(){await db.auth.signOut();window.location.assign("/login")}const live=assets.filter(a=>a.status!=="disposed"),consultants=assets.filter(a=>a.assignment_kind==="consultant"),needle=query.toLowerCase(),filteredAssets=assets.filter(a=>`${a.asset_tag} ${a.brand_model} ${a.serial_number||""} ${a.location||""}`.toLowerCase().includes(needle)),filteredEmployees=employees.filter(e=>`${e.name} ${e.department||""} ${e.office_location||""}`.toLowerCase().includes(needle));return <main className="viewer-app"><aside><div className="viewer-brand"><b>SPB</b><span>IT Asset<br/>Management</span></div><nav>{([["dashboard","▦","Dashboard"],["assets","▣","Hardware Assets"],["employees","♙","Employees"],["consultants","♧","Consultants"]]as[View,string,string][]).map(([key,icon,label])=><button key={key} className={view===key?"on":""} onClick={()=>{setView(key);setQuery("")}}><i>{icon}</i>{label}</button>)}</nav><small>VIEW-ONLY ACCESS<br/>SELANGOR PROPERTIES</small></aside><section><header><div><em>SPB IT ASSET MANAGEMENT · VIEWER</em><h1>{view==="dashboard"?"Dashboard overview":view==="assets"?"Hardware assets":view==="employees"?"Employees":"Consultants"}</h1><p>Read-only information maintained by SPB IT.</p></div><button className="viewer-signout" onClick={signOut}>Sign out</button></header>{message?<p className="viewer-state">{message}</p>:<>{view==="dashboard"&&<><div className="viewer-stats"><article><small>Active assets</small><b>{live.length}</b></article><article><small>Assigned</small><b>{live.filter(a=>a.status==="assigned").length}</b></article><article><small>Available</small><b>{live.filter(a=>a.status==="available").length}</b></article><article><small>Employees</small><b>{employees.length}</b></article><article><small>Consultant assets</small><b>{consultants.length}</b></article></div><div className="viewer-panel"><h2>Register status</h2><p>All information shown here is view-only. Contact SPB IT if an asset assignment or employee detail needs updating.</p></div></>}{view!=="dashboard"&&<div className="viewer-panel"><input aria-label="Search" placeholder={view==="employees"?"Search name, department or office location":"Search asset tag, model, serial or location"} value={query} onChange={e=>setQuery(e.target.value)}/>{view==="assets"&&<ViewerTable assets={filteredAssets.filter(a=>a.assignment_kind!=="consultant")}/>} {view==="consultants"&&<ViewerTable assets={consultants.filter(a=>`${a.asset_tag} ${a.brand_model} ${a.consultant_name||""} ${a.consultant_company||""}`.toLowerCase().includes(needle))} consultants/>}{view==="employees"&&<table><thead><tr><th>Name</th><th>Department</th><th>Office location</th></tr></thead><tbody>{filteredEmployees.map(e=><tr key={e.id}><td><b>{e.name}</b></td><td>{e.department||"—"}</td><td>{e.office_location||"—"}</td></tr>)}</tbody></table>}</div>}</>}</section></main>}
+function ViewerTable({assets,consultants=false}:{assets:Asset[];consultants?:boolean}){return <table><thead><tr><th>Asset</th><th>Type</th>{consultants&&<th>Consultant</th>}<th>Location</th><th>Status</th></tr></thead><tbody>{assets.map(a=><tr key={a.id}><td><b>{a.asset_tag}</b><small>{a.brand_model}{a.serial_number?` · SN: ${a.serial_number}`:""}</small></td><td>{a.asset_type}</td>{consultants&&<td><b>{a.consultant_name||"Not set"}</b><small>{a.consultant_company||"Company not set"}</small></td>}<td>{a.location||"—"}</td><td><span className="viewer-tag">{a.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table>}
