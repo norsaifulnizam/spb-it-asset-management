@@ -19,6 +19,7 @@ header em { font-size: 14px; }
 .app { position: relative; background: linear-gradient(90deg, #08152d 0 245px, var(--canvas) 245px); }
 .app::before { content: ""; position: fixed; z-index: 0; top: 82px; bottom: 0; left: 0; width: 245px; background: #08152d; }
 .app > aside, .app > section { position: relative; z-index: 1; }
+.app > section { max-width: none; margin: 0; }
 @media (max-width: 950px) { .app { background: var(--canvas); } .app::before { display: none; } }
 .remarks-detail { min-height: 48px; padding: 11px 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; background: #f8fafc; line-height: 1.5; white-space: pre-wrap; }
 .title-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
