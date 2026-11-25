@@ -4,7 +4,6 @@ import "./assignment.css";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { exportCsv } from "@/lib/export-csv";
-import StaffPortal from "./staff-portal";
 type Employee = { id: string; name: string; department: string | null; office_location: string | null };
 type Asset = {
   id: string;
@@ -601,10 +600,10 @@ export default function Home() {
   }
   if (!profileReady) return <main className="user-portal"><p className="state">Checking your access…</p></main>;
   async function signOut() { await db.auth.signOut(); window.location.assign("/login"); }
-  const viewer = profile?.role !== "admin";
-  if (accessView === "user") return <StaffPortal isAdmin onAdminConsole={() => setAccessView("admin")} displayName={account.name} email={account.email} />;
+  const isAdmin = profile?.role === "admin";
+  const viewer = !isAdmin || accessView === "user";
   return (
-    <><div className="account-bar"><div><b>•&nbsp; Hi {account.name}</b><small>{account.email}</small></div><div>{viewer ? <button className="account-active">Availability</button> : <><button onClick={() => setAccessView("user")}>Availability</button><button className="account-active">Admin console</button></>}<button onClick={signOut}>Sign out</button></div></div><main className={`app${viewer ? " viewer-console" : ""}`}>
+    <><div className="account-bar"><div><b>•&nbsp; Hi {account.name}</b><small>{account.email}</small></div><div>{isAdmin ? <><button className={accessView === "user" ? "account-active" : ""} onClick={() => setAccessView("user")}>Availability</button><button className={accessView === "admin" ? "account-active" : ""} onClick={() => setAccessView("admin")}>Admin console</button></> : <button className="account-active">Availability</button>}<button onClick={signOut}>Sign out</button></div></div><main className={`app${viewer ? " viewer-console" : ""}`}>
       <aside>
         <b>
           <i>⌘</i>AssetFlow
