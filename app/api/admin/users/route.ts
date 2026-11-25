@@ -68,6 +68,11 @@ export async function PATCH(request: NextRequest) {
     const { error } = await access.admin.from("asset_app_users").update({ is_active: isActive }).eq("id", id);
     return error ? NextResponse.json({ error: error.message }, { status: 400 }) : NextResponse.json({ ok: true });
   }
+  if (action === "employee") {
+    const employeeId = body.employeeId ? String(body.employeeId) : null;
+    const { error } = await access.admin.from("asset_app_users").update({ employee_id: employeeId }).eq("id", id);
+    return error ? NextResponse.json({ error: error.message }, { status: 400 }) : NextResponse.json({ ok: true });
+  }
   if (id === access.callerId && role !== "admin") return NextResponse.json({ error: "You cannot remove your own Admin role." }, { status: 400 });
   const { error } = await access.admin.from("asset_app_users").update({ role }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
