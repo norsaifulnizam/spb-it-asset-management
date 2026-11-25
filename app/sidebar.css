@@ -38,6 +38,15 @@
 .attention-tabs button { padding: 7px 10px; color: #475569; background: #f1f5f9; box-shadow: none; font-size: 12px; }
 .attention-tabs button:hover, .attention-tabs button.on { color: #fff; background: #881337; }
 .attention-tabs button b { margin-left: 6px; color: inherit; }
+.attention-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 16px 20px 20px; }
+.attention-group { overflow: hidden; border: 1px solid #dbe3ef; border-radius: 12px; background: #fff; }
+.attention-group header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e8edf5; }
+.attention-group h3 { margin: 0; color: #881337; font-size: 16px; }
+.attention-group header small { color: #64748b; }
+.attention-group .row { padding: 13px 16px; }
+.attention-group .row > span:nth-child(2) { min-width: 0; }
+.attention-group .row b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attention-group .pager { padding: 12px 16px; }
 .attention-assignee{display:grid;margin-left:auto;text-align:right;white-space:nowrap}.attention-assignee small{font-size:11px}.attention-assignee b{color:#334155;font-size:12px}.attention-assignee b:not(:empty){max-width:170px;overflow:hidden;text-overflow:ellipsis}
 .hardware-group { display: grid; gap: 2px; margin: 3px 0 7px; }
 .app > aside .hardware-subnav .hardware-group-title { color: #fff; background: #152644; font-size: 13px; font-weight: 800; }
@@ -45,7 +54,7 @@
 .app > aside .hardware-subnav .hardware-group button:not(.hardware-group-title) { margin-left: 10px; }
 .app > aside .hardware-subnav .assignment-subnav { display: grid; gap: 2px; margin: 2px 0 3px 22px; padding-left: 9px; border-left: 1px solid #31435f; }
 .app > aside .hardware-subnav .assignment-subnav button { margin-left: 0; font-size: 12px; }
-@media (max-width: 720px) { .ownership-stats { grid-template-columns: 1fr; } .ownership-card > div { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ownership-card span:nth-child(3) { border-right: 0; } .title-actions{justify-content:flex-start} }
+@media (max-width: 720px) { .ownership-stats, .attention-groups { grid-template-columns: 1fr; } .ownership-card > div { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ownership-card span:nth-child(3) { border-right: 0; } .title-actions{justify-content:flex-start} }
 
 /* Viewer uses the identical console layout, with all management controls removed. */
 .account-bar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.1rem 2rem;background:#f8fbff;border-bottom:1px solid #d7e2f2;color:#182c4c}.account-bar>div:first-child{display:grid;gap:.35rem}.account-bar b{color:#a81748;letter-spacing:.08em}.account-bar small{color:#4d6282}.account-bar>div:last-child{display:flex;gap:.35rem}.account-bar button{border:0;background:transparent;padding:.7rem .9rem;color:#31507b;font:inherit;font-weight:700;cursor:pointer;border-radius:.45rem}.account-bar .account-active{background:#fff;color:#1558dc;box-shadow:inset 0 0 0 1px #dbe7fa}

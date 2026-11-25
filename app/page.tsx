@@ -130,7 +130,8 @@ export default function Home() {
     [disposedOpen, setDisposedOpen] = useState(false),
     [pageSize, setPageSize] = useState(5),
     [assetPage, setAssetPage] = useState(1),
-    [attentionPage, setAttentionPage] = useState(1),
+    [spbAttentionPage, setSpbAttentionPage] = useState(1),
+    [consultantAttentionPage, setConsultantAttentionPage] = useState(1),
     [attentionTab, setAttentionTab] = useState("all"),
     [employeePage, setEmployeePage] = useState(1),
     [consultantPage, setConsultantPage] = useState(1),
@@ -261,9 +262,9 @@ export default function Home() {
       due,
     };
   };
-  // The dashboard is an end-user equipment overview: laptops and desktops only.
-  // Peripheral, server and mobile totals remain available in Hardware Assets.
-  const dashboardDevices = assets.filter((a) => ["Laptop", "Desktop Computer"].includes(a.asset_type));
+  // The dashboard focuses on day-to-day end-user equipment.
+  // Other hardware remains available in the Hardware Assets register.
+  const dashboardDevices = assets.filter((a) => ["Laptop", "Desktop Computer", "Printer"].includes(a.asset_type));
   const spbAssets = dashboardDevices.filter((a) => a.assignment_kind !== "consultant");
   const consultantAssetsForDashboard = dashboardDevices.filter((a) => a.assignment_kind === "consultant");
   const ownershipStatus = (group: Asset[]) => [
@@ -276,6 +277,7 @@ export default function Home() {
     label: label as string,
     laptops: (matching as Asset[]).filter((a) => a.asset_type === "Laptop").length,
     desktops: (matching as Asset[]).filter((a) => a.asset_type === "Desktop Computer").length,
+    printers: (matching as Asset[]).filter((a) => a.asset_type === "Printer").length,
   }));
   const list = assets.filter(
     (a) =>
@@ -323,8 +325,10 @@ export default function Home() {
     ["condition", "Poor condition", attention.filter((a) => a.condition === "poor" || a.condition === "defective")],
   ] as const;
   const selectedAttention = attentionTabs.find(([key]) => key === attentionTab)?.[2] || attention;
-  const attentionPages = Math.max(1, Math.ceil(selectedAttention.length / 10));
-  const attentionItems = selectedAttention.slice((attentionPage - 1) * 10, attentionPage * 10);
+  const attentionGroups = [
+    { key: "spb", label: "SPB", items: selectedAttention.filter((a) => a.assignment_kind !== "consultant"), page: spbAttentionPage, setPage: setSpbAttentionPage },
+    { key: "consultant", label: "Consultants", items: selectedAttention.filter((a) => a.assignment_kind === "consultant"), page: consultantAttentionPage, setPage: setConsultantAttentionPage },
+  ];
   const employeeList = people.filter((p) =>
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
@@ -651,7 +655,7 @@ export default function Home() {
           </div>
         )}
         {view === "dashboard" && <div className="ownership-stats">
-          {[["SPB", spbAssets], ["Consultants", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map((item) => <span key={item.label}><strong>{item.label}</strong><small>Laptop <b>{item.laptops}</b></small><small>Desktop <b>{item.desktops}</b></small></span>)}</div></div>)}
+          {[["SPB", spbAssets], ["Consultants", consultantAssetsForDashboard]].map(([label, group]) => <div className="ownership-card" key={label as string}><h2>{label as string}</h2><div>{ownershipStatus(group as Asset[]).map((item) => <span key={item.label}><strong>{item.label}</strong><small>Laptop <b>{item.laptops}</b></small><small>Desktop <b>{item.desktops}</b></small>{item.label === "Active" && <small>Printer <b>{item.printers}</b></small>}</span>)}</div></div>)}
         </div>}
         {view === "users" && <div className="panel user-management"><div className="user-management-heading"><div><em>USER MANAGEMENT</em><h2>Registered users</h2><p>Create staff accounts, manage roles, reset passwords and remove access when needed.</p></div><div><span className="active-user-count">{accounts.filter((account) => account.is_active).length}<small>active</small></span><button className="plain" onClick={loadAccounts}>Refresh</button></div></div><form className="create-user-card" onSubmit={createStaffAccount}><em>NEW STAFF ACCOUNT</em><h3>Create staff account</h3><p>The user can sign in immediately. No confirmation email is sent.</p><div className="form"><label>Employee record<select value={accountEmployeeId} onChange={(e) => setAccountEmployeeId(e.target.value)}><option value="">Link later / no employee record</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Role<select value={accountRole} onChange={(e) => setAccountRole(e.target.value as "admin" | "user")}><option value="user">User — view only</option><option value="admin">Admin — full management</option></select></label><label className="wide">Office email<input required type="email" placeholder="name@company.com" value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} /></label><label>Temporary password<span className="account-password"><input required minLength={8} type={showAccountPassword ? "text" : "password"} value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} /><button type="button" className="plain" onClick={() => setShowAccountPassword(!showAccountPassword)}>{showAccountPassword ? "Hide" : "Show"}</button></span></label><label>Confirm password<span className="account-password"><input required minLength={8} type={showAccountPassword ? "text" : "password"} value={accountPasswordConfirm} onChange={(e) => setAccountPasswordConfirm(e.target.value)} /><button type="button" className="plain" onClick={() => setShowAccountPassword(!showAccountPassword)}>{showAccountPassword ? "Hide" : "Show"}</button></span></label></div><small className="password-tip">Use at least 8 characters. The administrator can reset the password later.</small><div className="form-actions"><button type="submit">Create account</button><button className="plain" type="button" onClick={() => { setAccountEmail(""); setAccountPassword(""); setAccountPasswordConfirm(""); setAccountEmployeeId(""); setAccountRole("user"); }}>Cancel</button></div></form><div className="registered-user-list"><h3>Registered users</h3><p>Manage access, passwords and administrator roles.</p>{accounts.length ? <table><thead><tr><th>User</th><th>Office email</th><th>Role</th><th>Access</th></tr></thead><tbody>{accounts.map((account) => <tr key={account.id}><td><b>{account.employees?.name || "Not linked"}</b></td><td>{account.email}</td><td><select defaultValue={account.role} onChange={(e) => changeAccountRole(account.id, e.target.value as "admin" | "user")}><option value="user">User</option><option value="admin">Admin</option></select></td><td><button className="plain" onClick={() => accountAction(account.id, "password")}>Set new password</button><button className="plain" onClick={() => accountAction(account.id, "access", !account.is_active)}>{account.is_active ? "Remove access" : "Restore access"}</button></td></tr>)}</tbody></table> : <p className="state">Select Refresh to load user accounts.</p>}</div></div>}
         {view === "assets" && <div className="panel">
@@ -773,23 +777,12 @@ export default function Home() {
               </div>
               {!viewer && <button className="plain" onClick={exportAttention}>Export Excel</button>}
             </div>
-            <div className="attention-tabs">{attentionTabs.map(([key, label, items]) => <button key={key} className={attentionTab === key ? "on" : ""} onClick={() => { setAttentionTab(key); setAttentionPage(1); }}>{label}<b>{items.length}</b></button>)}</div>
-            {selectedAttention.length ? (
-              <>{attentionItems.map((a) => (
-                <a className="row" key={a.id} onClick={() => setDetail(a)}>
-                  <i />{" "}
-                  <span>
-                    <b>
-                      {a.asset_tag} · {a.brand_model}
-                    </b>
-                    <small>{attentionReason(a)}</small>
-                  </span>
-                  <span className="attention-assignee"><small>{a.assignment_kind === "consultant" ? "Consultant" : "Assigned to"}</small><b>{a.assignment_kind === "consultant" ? a.consultant_name || "Unassigned" : a.employees?.name || "Unassigned"}</b></span>
-                </a>
-              ))}{selectedAttention.length > 10 && <div className="pager"><small>Showing {(attentionPage - 1) * 10 + 1}–{Math.min(attentionPage * 10, selectedAttention.length)} of {selectedAttention.length}</small><div><button className="plain" disabled={attentionPage === 1} onClick={() => setAttentionPage(attentionPage - 1)}>Previous</button><span>{attentionPage} / {attentionPages}</span><button className="plain" disabled={attentionPage === attentionPages} onClick={() => setAttentionPage(attentionPage + 1)}>Next</button></div></div>}</>
-            ) : (
-              <p className="state">No assets in this attention category.</p>
-            )}
+            <div className="attention-tabs">{attentionTabs.map(([key, label, items]) => <button key={key} className={attentionTab === key ? "on" : ""} onClick={() => { setAttentionTab(key); setSpbAttentionPage(1); setConsultantAttentionPage(1); }}>{label}<b>{items.length}</b></button>)}</div>
+            <div className="attention-groups">{attentionGroups.map((group) => {
+              const pages = Math.max(1, Math.ceil(group.items.length / 5));
+              const items = group.items.slice((group.page - 1) * 5, group.page * 5);
+              return <section className="attention-group" key={group.key}><header><h3>{group.label}</h3><small>{group.items.length} follow-up{group.items.length === 1 ? "" : "s"}</small></header>{items.length ? <><div>{items.map((a) => <a className="row" key={a.id} onClick={() => setDetail(a)}><i /><span><b>{a.asset_tag} · {a.brand_model}</b><small>{attentionReason(a)}</small></span><span className="attention-assignee"><small>{a.assignment_kind === "consultant" ? "Consultant" : "Assigned to"}</small><b>{a.assignment_kind === "consultant" ? a.consultant_name || "Unassigned" : a.employees?.name || "Unassigned"}</b></span></a>)}</div>{group.items.length > 5 && <div className="pager"><small>Showing {(group.page - 1) * 5 + 1}–{Math.min(group.page * 5, group.items.length)} of {group.items.length}</small><div><button className="plain" disabled={group.page === 1} onClick={() => group.setPage(group.page - 1)}>Previous</button><span>{group.page} / {pages}</span><button className="plain" disabled={group.page === pages} onClick={() => group.setPage(group.page + 1)}>Next</button></div></div>}</> : <p className="state">No {group.label.toLowerCase()} assets in this attention category.</p>}</section>;
+            })}</div>
           </div>}
         {view === "employees" && <div className="panel employee-directory"><div className="title"><div><h2>Employee directory</h2><p>Search employee information and assigned assets. Select a name to view linked hardware.</p></div>{!viewer && <button className="plain" onClick={exportEmployees}>Export Excel</button>}</div><div className="filters"><input placeholder="Search name, department or office location" value={employeeQuery} onChange={(e) => { setEmployeeQuery(e.target.value); setEmployeePage(1); }} /></div>{employeeList.length ? <table><thead><tr><th>Name</th><th>Department</th><th>Office location</th><th>Assigned assets</th></tr></thead><tbody>{pageItems(employeeList, employeePage).map((p) => { const assigned = assets.filter(a => a.assigned_employee_id === p.id); return <tr key={p.id}><td><button type="button" className="employee-view-link" onClick={() => openEmployee(p)}>{p.name}</button></td><td>{p.department || "—"}</td><td>{p.office_location || "Not set"}</td><td>{assigned.length}</td></tr>; })}</tbody></table> : <p className="state">No employees match your search.</p>}{employeeList.length > 0 && <Pager total={employeeList.length} page={employeePage} setPage={setEmployeePage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
         {view === "consultants" && <div className="panel"><div className="title"><div><h2>Consultant assignments</h2><p>External people and companies holding SPB assets. Select a consultant to review linked hardware.</p></div>{!viewer && <button className="plain" onClick={exportConsultants}>Export Excel</button>}</div>{consultantGroups.length ? <table><thead><tr><th>Consultant</th><th>Company</th><th>Assigned assets</th><th>Location</th></tr></thead><tbody>{pageItems(consultantGroups, consultantPage).map((consultant) => <tr key={`${consultant.name}-${consultant.company}`}><td><button type="button" className="consultant-view-link" onClick={() => openConsultant(consultant)}>{consultant.name}</button></td><td>{consultant.company || "Not set"}</td><td>{consultant.assets.length}</td><td>{[...new Set(consultant.assets.map((asset) => asset.location).filter(Boolean))].join(", ") || "—"}</td></tr>)}</tbody></table> : <p className="state">No consultant assets yet.</p>}{consultantGroups.length > 0 && <Pager total={consultantGroups.length} page={consultantPage} setPage={setConsultantPage} pageSize={pageSize} setPageSize={changePageSize} />}</div>}
