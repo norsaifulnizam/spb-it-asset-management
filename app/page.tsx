@@ -607,6 +607,14 @@ export default function Home() {
     );
     load();
   }
+  async function addRepairLog(a: Asset) {
+    const description = window.prompt("Repair note:", "Repair in progress");
+    if (description === null) return;
+    const { error } = await db.from("maintenance_logs").insert({ asset_id: a.id, log_type: "repair", description: description.trim() || "Repair in progress" });
+    if (error) return setNotice(error.message);
+    setNotice("Repair log added.");
+    load();
+  }
   async function del(a: Asset) {
     if (!confirm(`Delete ${a.asset_tag}?`)) return;
     const r = await db.from("assets").delete().eq("id", a.id);
@@ -1028,9 +1036,10 @@ export default function Home() {
                 </>
               )}
               {detail.status === "under_repair" && (
-                <button onClick={() => change(detail, "available")}>
-                  Mark available / returned
-                </button>
+                <>
+                  <button className="warn" onClick={() => addRepairLog(detail)}>Add repair log</button>
+                  <button onClick={() => change(detail, "available")}>Mark available / returned</button>
+                </>
               )}</>}
               <h3>Maintenance history</h3>
               {logs
