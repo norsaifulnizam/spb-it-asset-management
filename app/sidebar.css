@@ -16,6 +16,8 @@
 .detail-tag { font-size: 13px; letter-spacing: 1.1px; }
 header em { font-size: 14px; }
 .app > aside { height: calc(100dvh - 82px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.app { background: linear-gradient(90deg, #08152d 0 245px, var(--canvas) 245px); }
+@media (max-width: 950px) { .app { background: var(--canvas); } }
 .remarks-detail { min-height: 48px; padding: 11px 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; background: #f8fafc; line-height: 1.5; white-space: pre-wrap; }
 .title-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .app-footer{display:grid;gap:8px;margin-top:34px;padding:22px 0 4px;border-top:1px solid #dbe3ef;color:#64748b;font-size:13px}.app-footer small{font-size:12px;letter-spacing:.1px}
