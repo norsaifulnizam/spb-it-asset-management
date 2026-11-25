@@ -15,7 +15,6 @@
 .detail-assignee b { color: #881337; font-size: 14px; }
 .detail-tag { font-size: 13px; letter-spacing: 1.1px; }
 .remarks-detail { min-height: 48px; padding: 11px 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; background: #f8fafc; line-height: 1.5; white-space: pre-wrap; }
-.dashboard-eyebrow{font-size:13px!important;letter-spacing:1.6px!important}
 .title-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .app-footer{display:grid;gap:8px;margin-top:34px;padding:22px 0 4px;border-top:1px solid #dbe3ef;color:#64748b;font-size:13px}.app-footer small{font-size:12px;letter-spacing:.1px}
 .facts .replacement-due{border-color:#fdba74;background:#fff7ed}.facts .replacement-due b{color:#c2410c}.facts .replacement-planned{background:#f8fafc}.facts .replacement-planned small,.facts .replacement-due small{display:block;margin-top:4px;font-size:11px;line-height:1.35}
