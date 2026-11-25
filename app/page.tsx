@@ -627,6 +627,10 @@ export default function Home() {
   }
   if (!profileReady) return <main className="user-portal"><p className="state">Checking your access…</p></main>;
   const pageLabel = ({ dashboard: "DASHBOARD", assets: "HARDWARE ASSETS", servers: "SERVERS", software: "SOFTWARE LICENCES", employees: "EMPLOYEES", consultants: "CONSULTANTS", maintenance: "MAINTENANCE", users: "USER ACCOUNTS" } as Record<string, string>)[view] || "DASHBOARD";
+  const assetTypeTitle = type === "Desktop Computer" ? "Desktop" : type === "mobile" ? "Tablet / Phone" : type;
+  const assetStatusTitle = ({ assigned: "Assigned", available: "Available / Unassigned", under_repair: "Under repair", disposed: "Disposed", not_applicable: "N/A" } as Record<string, string>)[status] || "";
+  const pageTitle = view === "assets" ? (type === "all" ? "Hardware assets" : assetTypeTitle) : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "IT Asset Overview" : view === "employees" ? "Employees" : view === "consultants" ? "Consultants" : view === "users" ? "User accounts" : "Maintenance logs";
+  const pageDescription = view === "assets" ? (type === "all" ? "Register and manage laptops, computers, devices and peripherals." : `Review ${assetStatusTitle ? `${assetStatusTitle.toLowerCase()} ` : ""}${assetTypeTitle.toLowerCase()} assets.`) : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "consultants" ? "View consultants and the SPB assets assigned to them." : view === "users" ? "Create sign-in access and link staff to their employee record." : view === "dashboard" ? "A summary of SPB and consultant laptops and desktops by current status." : "Asset repairs and service history.";
   async function signOut() { await db.auth.signOut(); window.location.assign("/login"); }
   const isAdmin = profile?.role === "admin";
   const viewer = !isAdmin || accessView === "user";
@@ -667,7 +671,7 @@ export default function Home() {
       </aside>
       <section>
         <header>
-          <div><em>SPB IT ASSET MANAGEMENT · {pageLabel}{viewer ? " · USER VIEW" : ""}</em><h1>{view === "assets" ? "Hardware assets" : view === "servers" ? "Server register" : view === "software" ? "Software licences" : view === "dashboard" ? "IT Asset Overview" : view === "employees" ? "Employees" : view === "consultants" ? "Consultants" : view === "users" ? "User accounts" : "Maintenance logs"}</h1><p>{view === "assets" ? "Register and manage laptops, computers, devices and peripherals." : view === "servers" ? "Keep each server's hardware record and technical information together." : view === "software" ? "Track subscriptions, licence seats, costs and renewal dates." : view === "employees" ? "Review people and their currently assigned assets." : view === "consultants" ? "View consultants and the SPB assets assigned to them." : view === "users" ? "Create sign-in access and link staff to their employee record." : view === "dashboard" ? "A summary of SPB and consultant laptops and desktops by current status." : "Asset repairs and service history."}</p></div>
+          <div><em>SPB IT ASSET MANAGEMENT · {pageLabel}{viewer ? " · USER VIEW" : ""}</em><h1>{pageTitle}</h1><p>{pageDescription}</p></div>
           {!viewer && (view === "assets" || view === "dashboard") && <button onClick={() => newAsset()}>+ Register hardware</button>}
           {!viewer && view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
           {!viewer && view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
@@ -685,8 +689,8 @@ export default function Home() {
         {view === "assets" && <div className="panel">
           <div className="title">
             <div>
-              <h2>Hardware asset register</h2>
-              <p>Laptops, computers, devices and peripherals saved to the live register.</p>
+              <h2>{type === "all" ? "Hardware asset register" : `${assetTypeTitle}${assetStatusTitle ? ` ${assetStatusTitle}` : ""}`}</h2>
+              <p>{type === "all" ? "Laptops, computers, devices and peripherals saved to the live register." : `Showing ${assetStatusTitle ? `${assetStatusTitle.toLowerCase()} ` : ""}${assetTypeTitle.toLowerCase()} assets.`}</p>
             </div>
             {!viewer && <div className="title-actions"><button className="plain" onClick={exportAssets}>Export Excel</button><button className="plain" onClick={load}>Refresh</button></div>}
           </div>
