@@ -603,7 +603,7 @@ export default function Home() {
   const isAdmin = profile?.role === "admin";
   const viewer = !isAdmin || accessView === "user";
   return (
-    <><div className="account-bar"><div><b>•&nbsp; Hi {account.name}</b><small>{account.email}</small></div><div>{isAdmin ? <><button className={accessView === "user" ? "account-active" : ""} onClick={() => setAccessView("user")}>Availability</button><button className={accessView === "admin" ? "account-active" : ""} onClick={() => setAccessView("admin")}>Admin console</button></> : <button className="account-active">Availability</button>}<button onClick={signOut}>Sign out</button></div></div><main className={`app${viewer ? " viewer-console" : ""}`}>
+    <><div className="account-bar"><div><b>•&nbsp; Hi {account.name}</b><small>{account.email}</small></div><div>{isAdmin ? <><button className={accessView === "user" ? "account-active" : ""} onClick={() => setAccessView("user")}>User view</button><button className={accessView === "admin" ? "account-active" : ""} onClick={() => setAccessView("admin")}>Admin console</button></> : <button className="account-active">User view</button>}<button onClick={signOut}>Sign out</button></div></div><main className={`app${viewer ? " viewer-console" : ""}`}>
       <aside>
         <b>
           <i>⌘</i>AssetFlow
