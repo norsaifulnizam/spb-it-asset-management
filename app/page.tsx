@@ -205,10 +205,12 @@ export default function Home() {
       setConsultants(c.error ? [] : c.data as Consultant[]);
       setLogs(l.data as Log[]);
       const linked = linkedSoftware.data as { assignment_id: string; employee_id: string; software_license_id: string; assigned_at: string; product_name: string; company: string | null; license_type: string }[] | null;
-      setSoftware(canManage ? (s.error ? [] : s.data as SoftwareLicense[]) : [...new Map((linked || []).map((item) => [item.software_license_id, { id: item.software_license_id, product_name: item.product_name, company: item.company || "SPB", license_type: item.license_type, vendor: null, total_seats: 0, assigned_seats: 0, renewal_date: null, annual_cost: null, notes: null }])).values()]);
+      const adminAssignments = [...(sa.error ? [] : sa.data as SoftwareAssignment[]), ...(sca.error ? [] : (sca.data as { id: string; software_license_id: string; consultant_id: string; assigned_at: string; notes: string | null }[]).map((item) => ({ ...item, employee_id: null })))] as SoftwareAssignment[];
+      const syncedSoftware = s.error ? [] : (s.data as SoftwareLicense[]).map((licence) => ({ ...licence, assigned_seats: Math.max(licence.assigned_seats, adminAssignments.filter((assignment) => assignment.software_license_id === licence.id).length) }));
+      setSoftware(canManage ? syncedSoftware : [...new Map((linked || []).map((item) => [item.software_license_id, { id: item.software_license_id, product_name: item.product_name, company: item.company || "SPB", license_type: item.license_type, vendor: null, total_seats: 0, assigned_seats: 0, renewal_date: null, annual_cost: null, notes: null }])).values()]);
       setServerDetails(sd.error ? [] : sd.data as ServerDetail[]);
       setSoftwareAssignments(canManage
-        ? [...(sa.error ? [] : sa.data as SoftwareAssignment[]), ...(sca.error ? [] : (sca.data as { id: string; software_license_id: string; consultant_id: string; assigned_at: string; notes: string | null }[]).map((item) => ({ ...item, employee_id: null })))]
+        ? adminAssignments
         : (linked || []).map((item) => ({ id: item.assignment_id, employee_id: item.employee_id, consultant_id: null, software_license_id: item.software_license_id, assigned_at: item.assigned_at, notes: null })));
       if (s.error) setNotice("Software Licences is still being set up. Hardware assets remain available.");
     }
