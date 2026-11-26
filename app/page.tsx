@@ -192,18 +192,17 @@ export default function Home() {
       canManage ? db.from("software_consultant_assignments").select("*") : Promise.resolve({ data: [], error: null }),
       canManage ? Promise.resolve({ data: [], error: null }) : db.rpc("get_viewer_employee_software"),
     ]);
-    if (a.error || p.error || c.error || l.error)
+    if (a.error || p.error || l.error)
       setNotice(
         a.error?.message ||
           p.error?.message ||
-          c.error?.message ||
           l.error?.message ||
           "Database error",
       );
     else {
       setAssets(a.data as Asset[]);
       setPeople(p.data as Employee[]);
-      setConsultants(c.data as Consultant[]);
+      setConsultants(c.error ? [] : c.data as Consultant[]);
       setLogs(l.data as Log[]);
       const linked = linkedSoftware.data as { assignment_id: string; employee_id: string; software_license_id: string; assigned_at: string; product_name: string; company: string | null; license_type: string }[] | null;
       setSoftware(canManage ? (s.error ? [] : s.data as SoftwareLicense[]) : [...new Map((linked || []).map((item) => [item.software_license_id, { id: item.software_license_id, product_name: item.product_name, company: item.company || "SPB", license_type: item.license_type, vendor: null, total_seats: 0, assigned_seats: 0, renewal_date: null, annual_cost: null, notes: null }])).values()]);
@@ -366,7 +365,7 @@ export default function Home() {
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
   const consultantAssets = assets.filter((a) => a.assignment_kind === "consultant" && a.consultant_name);
-  const consultantGroups = consultants.map((consultant) => ({ ...consultant, assets: consultantAssets.filter((asset) => asset.consultant_name === consultant.name && (asset.consultant_company || "") === consultant.company) }));
+  const consultantGroups = consultants.length ? consultants.map((consultant) => ({ ...consultant, assets: consultantAssets.filter((asset) => asset.consultant_name === consultant.name && (asset.consultant_company || "") === consultant.company) })) : Array.from(consultantAssets.reduce((groups, asset) => { const name = asset.consultant_name || "Unnamed consultant"; const company = asset.consultant_company || ""; const key = `${name}\u0000${company}`; const group = groups.get(key) || { id: key, name, company, office_location: null, assets: [] as Asset[] }; group.assets.push(asset); groups.set(key, group); return groups; }, new Map<string, Consultant & { assets: Asset[] }>()).values());
   const softwareList = software.filter((s) => (softwareCompany === "all" || s.company === softwareCompany) && [s.company, s.product_name, s.vendor, s.license_type].filter(Boolean).join(" ").toLowerCase().includes(softwareQuery.toLowerCase()));
   const renewalWindowEnd = new Date();
   renewalWindowEnd.setMonth(renewalWindowEnd.getMonth() + 3);
