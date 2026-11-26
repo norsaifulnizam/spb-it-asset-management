@@ -38,6 +38,9 @@ begin
   if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'software_consultant_assignments' and policyname = 'software_consultant_assignments_admin_all') then
     create policy software_consultant_assignments_admin_all on public.software_consultant_assignments for all using (public.is_asset_admin()) with check (public.is_asset_admin());
   end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'software_consultant_assignments' and policyname = 'software_consultant_assignments_authenticated_read') then
+    create policy software_consultant_assignments_authenticated_read on public.software_consultant_assignments for select using (auth.uid() is not null);
+  end if;
 end $$;
 
 notify pgrst, 'reload schema';
