@@ -31,6 +31,12 @@ header em { font-size: 14px; }
 .dashboard-breakdown h3 { margin: 0 0 10px; }
 .dashboard-breakdown div { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e8edf5; color: #64748b; }
 .dashboard-breakdown b { color: #17233a; }
+.software-renewal-reminders { margin: 0 0 18px; }
+.software-renewal-reminders .title { align-items: flex-start; }
+.renewal-count { display: inline-block; padding: 7px 10px; border-radius: 999px; color: #9f1239; background: #fff1f2; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.software-renewal-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 20px; border-top: 1px solid #e8edf5; }
+.software-renewal-row span { display: grid; gap: 3px; }
+.software-renewal-row small { color: #64748b; }
 .ownership-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0 0 18px; }
 .ownership-card { overflow: hidden; border: 1px solid #dbe3ef; border-radius: 13px; background: #fff; box-shadow: 0 5px 18px #1e293b0c; }
 .ownership-card h2 { padding: 17px 20px; color: #881337; border-bottom: 1px solid #e8edf5; font-size: 16px; }
