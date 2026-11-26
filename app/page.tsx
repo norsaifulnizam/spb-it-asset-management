@@ -1063,6 +1063,10 @@ export default function Home() {
                 <label className="wide">Specifications<textarea value={f.specifications} onChange={(e) => setF({ ...f, specifications: e.target.value })} placeholder="CPU, RAM, storage, graphics…" /></label>
                 <label className="wide">Software loaded<textarea value={f.installed_software} onChange={(e) => setF({ ...f, installed_software: e.target.value })} placeholder="Microsoft 365, Adobe, and other installed software…" /></label>
               </div>
+              {notice && <div className="notice asset-save-notice" role="alert">
+                {notice}
+                <span onClick={() => setNotice("")}>×</span>
+              </div>}
               <div className="actions">
                 <button
                   className="plain"
