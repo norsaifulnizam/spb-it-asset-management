@@ -475,7 +475,18 @@ export default function Home() {
   async function endConsultantAssignment() {
     if (viewer || !consultantDetail) return;
     const linkedAssets = consultantAssets.filter((asset) => asset.consultant_name === consultantDetail.name && (asset.consultant_company || "") === consultantDetail.company);
-    if (!linkedAssets.length) return setNotice("No linked assets were found for this consultant.");
+    if (!linkedAssets.length) {
+      const consultantIds = consultantDetail.ids || [consultantDetail.id];
+      const linkedSoftware = softwareAssignments.filter((assignment) => consultantIds.includes(assignment.consultant_id || ""));
+      if (linkedSoftware.length) return setNotice(`Cannot remove ${consultantDetail.name}: remove ${linkedSoftware.length} linked software licence(s) first.`);
+      if (!window.confirm(`Remove ${consultantDetail.name} from the consultant directory? This cannot be undone.`)) return;
+      const removed = await db.from("consultants").delete().in("id", consultantIds);
+      if (removed.error) return setNotice(removed.error.message);
+      setConsultantDetail(null);
+      setNotice("Consultant removed from the directory.");
+      load();
+      return;
+    }
     if (!window.confirm(`End the assignment for ${consultantDetail.name}? ${linkedAssets.length} asset(s) will be returned to Available / Unassigned. The hardware records will be kept.`)) return;
     const r = await db.from("assets").update({ assignment_kind: "internal", consultant_name: null, consultant_company: null, assigned_employee_id: null, status: "available" }).in("id", linkedAssets.map((asset) => asset.id));
     if (r.error) return setNotice(r.error.message);
