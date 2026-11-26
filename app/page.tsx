@@ -449,6 +449,8 @@ export default function Home() {
   async function createConsultant(e: React.FormEvent) {
     e.preventDefault();
     if (viewer || !consultantForm.name.trim() || !consultantForm.company.trim()) return;
+    const duplicate = consultants.some((consultant) => consultantKey(consultant.name, consultant.company) === consultantKey(consultantForm.name, consultantForm.company));
+    if (duplicate) return setNotice("This consultant already exists for that company. Open the existing record to update it instead.");
     const r = await db.from("consultants").insert({ name: consultantForm.name.trim(), company: consultantForm.company.trim(), office_location: consultantForm.office_location.trim() || null });
     if (r.error) return setNotice(r.error.message);
     setAddingConsultant(false);
