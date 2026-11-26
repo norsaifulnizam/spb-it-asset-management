@@ -369,6 +369,7 @@ export default function Home() {
   const consultantAssets = assets.filter((a) => a.assignment_kind === "consultant" && a.consultant_name).map((asset) => ({ ...asset, consultant_name: asset.consultant_name?.trim() || null, consultant_company: asset.consultant_company?.trim() || null }));
   const consultantKey = (name: string | null, company: string | null) => `${(name || "").trim().toLocaleUpperCase()}\u0000${(company || "").trim().toLocaleUpperCase()}`;
   const consultantGroups = consultants.length ? Array.from(consultants.reduce((groups, consultant) => { const key = consultantKey(consultant.name, consultant.company); const group = groups.get(key) || { ...consultant, name: consultant.name.trim(), company: consultant.company.trim(), ids: [] as string[], assets: [] as Asset[] }; group.ids.push(consultant.id); groups.set(key, group); return groups; }, new Map<string, Consultant & { ids: string[]; assets: Asset[] }>()).values()).map((group) => ({ ...group, assets: consultantAssets.filter((asset) => consultantKey(asset.consultant_name, asset.consultant_company) === consultantKey(group.name, group.company)) })) : Array.from(consultantAssets.reduce((groups, asset) => { const name = (asset.consultant_name || "Unnamed consultant").trim(); const company = (asset.consultant_company || "").trim(); const key = consultantKey(name, company); const group = groups.get(key) || { id: key, name, company, office_location: null, ids: [key], assets: [] as Asset[] }; group.assets.push(asset); groups.set(key, group); return groups; }, new Map<string, Consultant & { ids: string[]; assets: Asset[] }>()).values());
+  const locationOptions = [...new Set([...assets.map((asset) => asset.location), ...people.map((person) => person.office_location), ...consultants.map((consultant) => consultant.office_location)].filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim()))].sort((a, b) => a.localeCompare(b));
   const softwareList = software.filter((s) => (softwareCompany === "all" || s.company === softwareCompany) && [s.company, s.product_name, s.vendor, s.license_type].filter(Boolean).join(" ").toLowerCase().includes(softwareQuery.toLowerCase()));
   const renewalWindowEnd = new Date();
   renewalWindowEnd.setMonth(renewalWindowEnd.getMonth() + 3);
@@ -1004,11 +1005,13 @@ export default function Home() {
                     ))}
                   </select>
                 </label>
-                <Input
-                  l="Location"
-                  v={f.location}
-                  set={(v) => setF({ ...f, location: v })}
-                />
+                <label>
+                  Location
+                  <select value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })}>
+                    <option value="">Select location…</option>
+                    {locationOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
                 {f.status !== "disposed" && <label>
                   Assignment type
                   <select value={f.assignment_kind} onChange={(e) => setF({ ...f, assignment_kind: e.target.value })}><option value="internal">Internal staff</option><option value="consultant">Consultant / external</option></select>
@@ -1018,8 +1021,15 @@ export default function Home() {
                   <input list="employee-names" value={f.assigned_user} onChange={(e) => setF({ ...f, assigned_user: e.target.value })} placeholder="Search or type a new name" />
                   <datalist id="employee-names">{people.map((p) => <option key={p.id} value={p.name}>{p.department || "Employee"}</option>)}</datalist>
                   <small>New names are added to Employees when you save.</small>
-                </label> : <Input l="Consultant name" v={f.consultant_name} set={(v) => setF({ ...f, consultant_name: v })} />)}
-                {f.status !== "disposed" && f.assignment_kind === "consultant" && <Input l="Consultant company" v={f.consultant_company} set={(v) => setF({ ...f, consultant_company: v })} />}
+                </label> : <label>
+                  Consultant name
+                  <select value={consultantKey(f.consultant_name, f.consultant_company)} onChange={(e) => { const consultant = consultantGroups.find((item) => consultantKey(item.name, item.company) === e.target.value); setF({ ...f, consultant_name: consultant?.name || "", consultant_company: consultant?.company || "" }); }}>
+                    <option value="">Select consultant…</option>
+                    {consultantGroups.map((consultant) => <option key={consultant.id} value={consultantKey(consultant.name, consultant.company)}>{consultant.name} · {consultant.company || "Company not set"}</option>)}
+                  </select>
+                  <small>Select an existing consultant to prevent duplicate names.</small>
+                </label>)}
+                {f.status !== "disposed" && f.assignment_kind === "consultant" && <label>Consultant company<input value={f.consultant_company} readOnly /></label>}
                 <label>
                   Status
                   <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
