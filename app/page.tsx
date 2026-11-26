@@ -463,7 +463,7 @@ export default function Home() {
       const assetsUpdated = await db.from("assets").update({ consultant_name: next.name, consultant_company: next.company }).in("id", linkedAssets.map((asset) => asset.id));
       if (assetsUpdated.error) return setNotice(`Consultant saved, but linked hardware could not be updated: ${assetsUpdated.error.message}`);
     }
-    setConsultantDetail({ ...consultantDetail, ...next });
+    setConsultantDetail(null);
     setNotice("Consultant details saved.");
     load();
   }
