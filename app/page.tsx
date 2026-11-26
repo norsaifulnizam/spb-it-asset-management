@@ -5,6 +5,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { exportCsv } from "@/lib/export-csv";
 type Employee = { id: string; name: string; department: string | null; office_location: string | null };
+type Consultant = { id: string; name: string; company: string; office_location: string | null };
 type Asset = {
   id: string;
   asset_tag: string;
@@ -54,7 +55,7 @@ type SoftwareLicense = {
   annual_cost: number | null;
   notes: string | null;
 };
-type SoftwareAssignment = { id: string; software_license_id: string; employee_id: string; assigned_at: string; notes: string | null };
+type SoftwareAssignment = { id: string; software_license_id: string; employee_id: string | null; consultant_id: string | null; assigned_at: string; notes: string | null };
 type ServerDetail = {
   asset_id: string;
   hostname: string | null;
@@ -109,6 +110,7 @@ export default function Home() {
     [account, setAccount] = useState({ name: "", email: "" }),
     [profileReady, setProfileReady] = useState(false),
     [people, setPeople] = useState<Employee[]>([]),
+    [consultants, setConsultants] = useState<Consultant[]>([]),
     [logs, setLogs] = useState<Log[]>([]),
     [software, setSoftware] = useState<SoftwareLicense[]>([]),
     [softwareAssignments, setSoftwareAssignments] = useState<SoftwareAssignment[]>([]),
@@ -145,13 +147,18 @@ export default function Home() {
     [softwareCompany, setSoftwareCompany] = useState("all"),
     [employeeQuery, setEmployeeQuery] = useState(""),
     [employeeDetail, setEmployeeDetail] = useState<Employee | null>(null),
+    [addingEmployee, setAddingEmployee] = useState(false),
     [employeeForm, setEmployeeForm] = useState({ name: "", department: "", office_location: "" }),
-    [consultantDetail, setConsultantDetail] = useState<{ name: string; company: string } | null>(null),
+    [consultantDetail, setConsultantDetail] = useState<Consultant | null>(null),
+    [addingConsultant, setAddingConsultant] = useState(false),
+    [consultantForm, setConsultantForm] = useState({ name: "", company: "", office_location: "" }),
     [softwareEdit, setSoftwareEdit] = useState<SoftwareLicense | null | undefined>(undefined),
     [softwareForm, setSoftwareForm] = useState(emptySoftware),
     [renewalLicense, setRenewalLicense] = useState<SoftwareLicense | null>(null),
     [renewalForm, setRenewalForm] = useState({ renewed_on: "", next_renewal_date: "", notes: "" }),
     [softwareAssignmentLicense, setSoftwareAssignmentLicense] = useState<SoftwareLicense | null>(null),
+    [consultantSoftwareTarget, setConsultantSoftwareTarget] = useState(""),
+    [consultantSoftwareId, setConsultantSoftwareId] = useState(""),
     [accountEmail, setAccountEmail] = useState(""),
     [accountPassword, setAccountPassword] = useState(""),
     [accountPasswordConfirm, setAccountPasswordConfirm] = useState(""),
@@ -168,12 +175,13 @@ export default function Home() {
   async function load() {
     setBusy(true);
     const canManage = profile?.role === "admin";
-    const [a, p, l, s, sd, sa, linkedSoftware] = await Promise.all([
+    const [a, p, c, l, s, sd, sa, sca, linkedSoftware] = await Promise.all([
       db
         .from("assets")
         .select("*, employees(id,name,department)")
         .order("created_at", { ascending: false }),
       db.from("employees").select("id,name,department,office_location").order("name"),
+      db.from("consultants").select("id,name,company,office_location").order("name"),
       canManage ? db
         .from("maintenance_logs")
         .select("*")
@@ -181,23 +189,28 @@ export default function Home() {
       canManage ? db.from("software_licenses").select("*").order("product_name") : Promise.resolve({ data: [], error: null }),
       canManage ? db.from("server_details").select("*") : Promise.resolve({ data: [], error: null }),
       canManage ? db.from("software_license_assignments").select("*") : Promise.resolve({ data: [], error: null }),
+      canManage ? db.from("software_consultant_assignments").select("*") : Promise.resolve({ data: [], error: null }),
       canManage ? Promise.resolve({ data: [], error: null }) : db.rpc("get_viewer_employee_software"),
     ]);
-    if (a.error || p.error || l.error)
+    if (a.error || p.error || c.error || l.error)
       setNotice(
         a.error?.message ||
           p.error?.message ||
+          c.error?.message ||
           l.error?.message ||
           "Database error",
       );
     else {
       setAssets(a.data as Asset[]);
       setPeople(p.data as Employee[]);
+      setConsultants(c.data as Consultant[]);
       setLogs(l.data as Log[]);
       const linked = linkedSoftware.data as { assignment_id: string; employee_id: string; software_license_id: string; assigned_at: string; product_name: string; company: string | null; license_type: string }[] | null;
       setSoftware(canManage ? (s.error ? [] : s.data as SoftwareLicense[]) : [...new Map((linked || []).map((item) => [item.software_license_id, { id: item.software_license_id, product_name: item.product_name, company: item.company || "SPB", license_type: item.license_type, vendor: null, total_seats: 0, assigned_seats: 0, renewal_date: null, annual_cost: null, notes: null }])).values()]);
       setServerDetails(sd.error ? [] : sd.data as ServerDetail[]);
-      setSoftwareAssignments(canManage ? (sa.error ? [] : sa.data as SoftwareAssignment[]) : (linked || []).map((item) => ({ id: item.assignment_id, employee_id: item.employee_id, software_license_id: item.software_license_id, assigned_at: item.assigned_at, notes: null })));
+      setSoftwareAssignments(canManage
+        ? [...(sa.error ? [] : sa.data as SoftwareAssignment[]), ...(sca.error ? [] : (sca.data as { id: string; software_license_id: string; consultant_id: string; assigned_at: string; notes: string | null }[]).map((item) => ({ ...item, employee_id: null })))]
+        : (linked || []).map((item) => ({ id: item.assignment_id, employee_id: item.employee_id, consultant_id: null, software_license_id: item.software_license_id, assigned_at: item.assigned_at, notes: null })));
       if (s.error) setNotice("Software Licences is still being set up. Hardware assets remain available.");
     }
     setBusy(false);
@@ -353,15 +366,7 @@ export default function Home() {
     [p.name, p.department, p.office_location].filter(Boolean).join(" ").toLowerCase().includes(employeeQuery.toLowerCase()),
   );
   const consultantAssets = assets.filter((a) => a.assignment_kind === "consultant" && a.consultant_name);
-  const consultantGroups = Array.from(consultantAssets.reduce((groups, asset) => {
-    const name = asset.consultant_name || "Unnamed consultant";
-    const company = asset.consultant_company || "";
-    const key = `${name}\u0000${company}`;
-    const group = groups.get(key) || { name, company, assets: [] as Asset[] };
-    group.assets.push(asset);
-    groups.set(key, group);
-    return groups;
-  }, new Map<string, { name: string; company: string; assets: Asset[] }>()).values()).sort((a, b) => a.name.localeCompare(b.name));
+  const consultantGroups = consultants.map((consultant) => ({ ...consultant, assets: consultantAssets.filter((asset) => asset.consultant_name === consultant.name && (asset.consultant_company || "") === consultant.company) }));
   const softwareList = software.filter((s) => (softwareCompany === "all" || s.company === softwareCompany) && [s.company, s.product_name, s.vendor, s.license_type].filter(Boolean).join(" ").toLowerCase().includes(softwareQuery.toLowerCase()));
   const renewalWindowEnd = new Date();
   renewalWindowEnd.setMonth(renewalWindowEnd.getMonth() + 3);
@@ -386,8 +391,23 @@ export default function Home() {
   const exportServers = () => exportCsv("server-register", ["Asset tag", "Brand / model", "Serial number", "Hostname", "IP address", "Operating system", "Server role", "Environment", "Rack location", "Asset location", "Status"], assets.filter((asset) => asset.asset_type === "Server").map((asset) => { const info = serverDetails.find((item) => item.asset_id === asset.id); return [asset.asset_tag, asset.brand_model, asset.serial_number, info?.hostname, info?.ip_address, info?.operating_system, info?.server_role, info?.environment, info?.rack_location, asset.location, asset.status.replaceAll("_", " ")]; }));
   const exportAttention = () => exportCsv(`needs-attention-${attentionTab}`, ["Asset tag", "Brand / model", "Reason", "Assigned to", "Company", "Location", "Status", "Purchase date", "Warranty expiry"], selectedAttention.map((asset) => [asset.asset_tag, asset.brand_model, attentionReason(asset), assignedName(asset), asset.company, asset.location, asset.status.replaceAll("_", " "), asset.purchase_date, asset.warranty_expiry]));
   function openEmployee(p: Employee) {
+    setAddingEmployee(false);
     setEmployeeDetail(p);
     setEmployeeForm({ name: p.name, department: p.department || "", office_location: p.office_location || "" });
+  }
+  function openNewEmployee() {
+    setEmployeeDetail(null);
+    setEmployeeForm({ name: "", department: "", office_location: "" });
+    setAddingEmployee(true);
+  }
+  async function createEmployee(e: React.FormEvent) {
+    e.preventDefault();
+    if (viewer || !employeeForm.name.trim()) return;
+    const r = await db.from("employees").insert({ name: employeeForm.name.trim(), department: employeeForm.department.trim() || null, office_location: employeeForm.office_location.trim() || null });
+    if (r.error) return setNotice(r.error.message);
+    setAddingEmployee(false);
+    setNotice("Employee added. You can now link software or hardware when needed.");
+    load();
   }
   async function saveEmployee(e: React.FormEvent) {
     e.preventDefault();
@@ -412,8 +432,23 @@ export default function Home() {
     setNotice("Employee removed from the directory.");
     load();
   }
-  function openConsultant(consultant: { name: string; company: string }) {
+  function openConsultant(consultant: Consultant) {
+    setAddingConsultant(false);
     setConsultantDetail(consultant);
+  }
+  function openNewConsultant() {
+    setConsultantDetail(null);
+    setConsultantForm({ name: "", company: "", office_location: "" });
+    setAddingConsultant(true);
+  }
+  async function createConsultant(e: React.FormEvent) {
+    e.preventDefault();
+    if (viewer || !consultantForm.name.trim() || !consultantForm.company.trim()) return;
+    const r = await db.from("consultants").insert({ name: consultantForm.name.trim(), company: consultantForm.company.trim(), office_location: consultantForm.office_location.trim() || null });
+    if (r.error) return setNotice(r.error.message);
+    setAddingConsultant(false);
+    setNotice("Consultant added. You can now link software or hardware when needed.");
+    load();
   }
   async function endConsultantAssignment() {
     if (viewer || !consultantDetail) return;
@@ -463,11 +498,15 @@ export default function Home() {
     if (r.error) return setNotice(r.error.message);
     setSoftwareEdit(undefined); setNotice("Software licence deleted."); load();
   }
-  async function assignSoftware(license: SoftwareLicense, employeeId: string) {
-    if (!employeeId) return;
-    if (assignmentsFor(license.id).some((assignment) => assignment.employee_id === employeeId)) return setNotice("This licence is already assigned to that employee.");
+  async function assignSoftware(license: SoftwareLicense, target: string) {
+    if (!target) return;
+    const [targetType, targetId] = target.includes(":") ? target.split(":") : ["employee", target];
+    if (!targetId || !["employee", "consultant"].includes(targetType)) return;
+    if (assignmentsFor(license.id).some((assignment) => targetType === "employee" ? assignment.employee_id === targetId : assignment.consultant_id === targetId)) return setNotice("This licence is already assigned to that person.");
     if (assignmentsFor(license.id).length >= license.total_seats) return setNotice("No licence seats are available for this software.");
-    const r = await db.from("software_license_assignments").insert({ software_license_id: license.id, employee_id: employeeId });
+    const r = targetType === "employee"
+      ? await db.from("software_license_assignments").insert({ software_license_id: license.id, employee_id: targetId })
+      : await db.from("software_consultant_assignments").insert({ software_license_id: license.id, consultant_id: targetId });
     if (r.error) return setNotice(r.error.message);
     setNotice("Software licence assigned.");
     load();
@@ -477,6 +516,12 @@ export default function Home() {
     if (r.error) return setNotice(r.error.message);
     setNotice("Software licence assignment removed.");
     load();
+  }
+  async function assignSelectedConsultantSoftware() {
+    const licence = software.find((item) => item.id === consultantSoftwareId);
+    if (!licence || !consultantSoftwareTarget) return setNotice("Select a consultant and software licence first.");
+    await assignSoftware(licence, `consultant:${consultantSoftwareTarget}`);
+    setConsultantSoftwareId("");
   }
   function newAsset(assetType = "Laptop") {
     setEdit(null);
@@ -701,6 +746,8 @@ export default function Home() {
           {!viewer && (view === "assets" || view === "dashboard") && <button onClick={() => newAsset()}>+ Register hardware</button>}
           {!viewer && view === "servers" && <button onClick={() => newAsset("Server")}>+ Register server</button>}
           {!viewer && view === "software" && <button onClick={newSoftware}>+ Add software licence</button>}
+          {!viewer && view === "employees" && <button onClick={openNewEmployee}>+ Add employee</button>}
+          {!viewer && view === "consultants" && <button onClick={openNewConsultant}>+ Add consultant</button>}
         </header>
         {notice && view !== "dashboard" && (
           <div className="notice">
@@ -1103,6 +1150,9 @@ export default function Home() {
         {employeeDetail && <div className="modal"><form onSubmit={saveEmployee} className="employee-detail-form"><div className="title employee-detail-title"><div><em>EMPLOYEE DETAILS</em><h2>{employeeDetail.name}</h2><p>Profile, assigned hardware and software access.</p></div><button className="x" type="button" onClick={() => setEmployeeDetail(null)}>×</button></div><section className="employee-section"><h3>Profile</h3><div className="form"><Input l="Name *" v={employeeForm.name} set={(v) => setEmployeeForm({ ...employeeForm, name: v })} /><Input l="Department" v={employeeForm.department} set={(v) => setEmployeeForm({ ...employeeForm, department: v })} /><Input l="Office location" v={employeeForm.office_location} set={(v) => setEmployeeForm({ ...employeeForm, office_location: v })} /></div></section><section className="employee-section"><h3>Assigned hardware</h3><div className="employee-resource-list">{assets.filter(a => a.assigned_employee_id === employeeDetail.id).map(a => <div key={a.id}><span><b>{a.asset_tag}</b><small>{a.brand_model} · {a.status.replace("_", " ")}</small></span><button type="button" className="plain" onClick={() => { setEmployeeDetail(null); setDetail(a); }}>View</button></div>)}{!assets.some(a => a.assigned_employee_id === employeeDetail.id) && <small>No hardware currently assigned.</small>}</div></section><section className="employee-section"><div className="employee-section-heading"><h3>Software licences</h3><label>Add software licence<select defaultValue="" onChange={(e) => { const license = software.find((s) => s.id === e.target.value); if (license) assignSoftware(license, employeeDetail.id); e.currentTarget.value = ""; }}><option value="" disabled>Select software…</option>{software.filter((s) => !softwareAssignments.some((assignment) => assignment.employee_id === employeeDetail.id && assignment.software_license_id === s.id)).map((s) => <option key={s.id} value={s.id}>{s.company || "SPB"} · {s.product_name}</option>)}</select></label></div><div className="employee-resource-list">{softwareAssignments.filter((assignment) => assignment.employee_id === employeeDetail.id).map((assignment) => { const license = software.find((s) => s.id === assignment.software_license_id); return <div key={assignment.id}><span><b>{license?.product_name || "Software licence"}</b><small>{license?.company || "SPB"} · {license?.license_type || ""} · Assigned {new Date(assignment.assigned_at).toLocaleDateString()}</small></span><button className="plain" type="button" onClick={() => removeSoftwareAssignment(assignment.id)}>Remove</button></div>; })}{!softwareAssignments.some((assignment) => assignment.employee_id === employeeDetail.id) && <small>No software licences assigned.</small>}</div></section><div className="actions">{!viewer && <button className="delete" type="button" onClick={deleteEmployee}>Remove employee</button>}<button className="plain" type="button" onClick={() => setEmployeeDetail(null)}>Cancel</button>{!viewer && <button>Save details</button>}</div></form></div>}
         {consultantDetail && <div className="modal"><div className="detail employee-detail-form"><div className="title employee-detail-title"><div><em>CONSULTANT DETAILS</em><h2>{consultantDetail.name}</h2><p>{consultantDetail.company || "Company not set"} · Linked hardware</p></div><button className="x" type="button" onClick={() => setConsultantDetail(null)}>×</button></div><section className="employee-section"><h3>Assigned hardware</h3><div className="employee-resource-list">{consultantAssets.filter((asset) => asset.consultant_name === consultantDetail.name && (asset.consultant_company || "") === consultantDetail.company).map((asset) => <div key={asset.id}><span><b>{asset.asset_tag}</b><small>{asset.brand_model} · {asset.status.replace("_", " ")}</small></span><button type="button" className="plain" onClick={() => { setConsultantDetail(null); setDetail(asset); }}>View</button></div>)}</div></section><div className="actions">{!viewer && <button className="delete" type="button" onClick={endConsultantAssignment}>End consultant assignment</button>}<button className="plain" type="button" onClick={() => setConsultantDetail(null)}>Close</button></div></div></div>}
         {softwareAssignmentLicense && <div className="modal"><div className="detail">{(() => { const allAssignments = assignmentsFor(softwareAssignmentLicense.id).sort((a, b) => (people.find((person) => person.id === a.employee_id)?.name || "").localeCompare(people.find((person) => person.id === b.employee_id)?.name || "")); const pages = Math.max(1, Math.ceil(allAssignments.length / 5)); const shownAssignments = allAssignments.slice((softwareAssignmentPage - 1) * 5, softwareAssignmentPage * 5); return <><div className="title"><div><em>SOFTWARE ASSIGNMENTS</em><h2>{softwareAssignmentLicense.product_name}</h2><p>{softwareAssignmentLicense.company || "SPB"} · {allAssignments.length} named user(s) of {softwareAssignmentLicense.total_seats} seats</p></div><button className="x" onClick={() => setSoftwareAssignmentLicense(null)}>×</button></div><label>Assign to employee<select defaultValue="" onChange={(e) => { assignSoftware(softwareAssignmentLicense, e.target.value); e.currentTarget.value = ""; }}><option value="" disabled>Select employee…</option>{people.filter((person) => !allAssignments.some((assignment) => assignment.employee_id === person.id)).map((person) => <option key={person.id} value={person.id}>{person.name}{person.department ? ` — ${person.department}` : ""}</option>)}</select></label><h3>Assigned users</h3><div className="software-assignment-list">{shownAssignments.map((assignment) => <div key={assignment.id}><span><b>{people.find((person) => person.id === assignment.employee_id)?.name || "Employee removed"}</b><small>Assigned {new Date(assignment.assigned_at).toLocaleDateString()}</small></span><button className="plain" onClick={() => removeSoftwareAssignment(assignment.id)}>Remove</button></div>)}{!allAssignments.length && <small>No staff assigned to this licence yet.</small>}</div>{allAssignments.length > 5 && <div className="pager"><small>Showing {(softwareAssignmentPage - 1) * 5 + 1}–{Math.min(softwareAssignmentPage * 5, allAssignments.length)} of {allAssignments.length}</small><div><button className="plain" disabled={softwareAssignmentPage === 1} onClick={() => setSoftwareAssignmentPage(softwareAssignmentPage - 1)}>Previous</button><span>{softwareAssignmentPage} / {pages}</span><button className="plain" disabled={softwareAssignmentPage === pages} onClick={() => setSoftwareAssignmentPage(softwareAssignmentPage + 1)}>Next</button></div></div>}<div className="actions"><button className="plain" onClick={() => setSoftwareAssignmentLicense(null)}>Close</button></div></>; })()}</div></div>}
+        {view === "consultants" && !viewer && <div className="panel consultant-software-link"><div className="title"><div><h2>Link software licence</h2><p>Assign a software licence to a consultant, even when they have no hardware.</p></div></div><div className="form"><label>Consultant<select value={consultantSoftwareTarget} onChange={(e) => setConsultantSoftwareTarget(e.target.value)}><option value="">Select consultant…</option>{consultants.map((consultant) => <option key={consultant.id} value={consultant.id}>{consultant.name} · {consultant.company}</option>)}</select></label><label>Software licence<select value={consultantSoftwareId} onChange={(e) => setConsultantSoftwareId(e.target.value)}><option value="">Select software…</option>{software.filter((licence) => assignmentsFor(licence.id).length < licence.total_seats).map((licence) => <option key={licence.id} value={licence.id}>{licence.company} · {licence.product_name}</option>)}</select></label></div><div className="actions"><button type="button" onClick={assignSelectedConsultantSoftware}>Assign software</button></div></div>}
+        {addingEmployee && <div className="modal"><form onSubmit={createEmployee} className="employee-detail-form"><div className="title employee-detail-title"><div><em>EMPLOYEE DIRECTORY</em><h2>Add employee</h2><p>Create the employee first, then link software or hardware when needed.</p></div><button className="x" type="button" onClick={() => setAddingEmployee(false)}>×</button></div><div className="form"><Input l="Name *" v={employeeForm.name} set={(v) => setEmployeeForm({ ...employeeForm, name: v })} /><Input l="Department" v={employeeForm.department} set={(v) => setEmployeeForm({ ...employeeForm, department: v })} /><Input l="Office location" v={employeeForm.office_location} set={(v) => setEmployeeForm({ ...employeeForm, office_location: v })} /></div><div className="actions"><button className="plain" type="button" onClick={() => setAddingEmployee(false)}>Cancel</button><button>Add employee</button></div></form></div>}
+        {addingConsultant && <div className="modal"><form onSubmit={createConsultant} className="employee-detail-form"><div className="title employee-detail-title"><div><em>CONSULTANT DIRECTORY</em><h2>Add consultant</h2><p>Create the consultant first, then link software or hardware when needed.</p></div><button className="x" type="button" onClick={() => setAddingConsultant(false)}>×</button></div><div className="form"><Input l="Consultant name *" v={consultantForm.name} set={(v) => setConsultantForm({ ...consultantForm, name: v })} /><Input l="Company *" v={consultantForm.company} set={(v) => setConsultantForm({ ...consultantForm, company: v })} /><Input l="Office location" v={consultantForm.office_location} set={(v) => setConsultantForm({ ...consultantForm, office_location: v })} /></div><div className="actions"><button className="plain" type="button" onClick={() => setAddingConsultant(false)}>Cancel</button><button>Add consultant</button></div></form></div>}
         <footer className="app-footer"><small>© 2026 Selangor Properties Sdn. Bhd. · Developed by IT Department</small></footer>
       </section>
     </main></>
